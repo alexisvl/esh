@@ -77,7 +77,6 @@ void esh_rx(struct esh * esh, char c)
         execute_command(esh);
         break;
     default:
-        esh->print(esh, c_as_string);
         handle_char(esh, c);
         break;
     }
@@ -115,8 +114,11 @@ static void handle_char(struct esh * esh, char c)
     }
 
     if (is_bksp) {
+        esh->print(esh, "\b \b");
         --esh->cnt;
     } else {
+        char c_as_string[] = {c, 0};
+        esh->print(esh, c_as_string);
         esh->buffer[esh->cnt] = c;
         ++esh->cnt;
     }
