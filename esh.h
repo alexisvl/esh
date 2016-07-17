@@ -26,6 +26,9 @@
 
 #include "esh_config.h"
 #include <stddef.h>
+#include <stdbool.h>
+
+struct esh;
 
 /**
  * Callback to handle commands.
@@ -56,10 +59,11 @@ typedef int (*esh_overflow)(struct esh const * esh, char const * buffer);
 struct esh {
     char buffer[ESH_BUFFER_LEN + 1];
     size_t cnt;
-    char * argv[ESH_ARGC_MAX];
+    char const * argv[ESH_ARGC_MAX];
     esh_callback callback;
     esh_print print;
     esh_overflow overflow;
+    bool last_was_cr;
 };
 
 /**

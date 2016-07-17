@@ -24,13 +24,14 @@
 #include <esh.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 #ifdef __AVR_ARCH__
 #   define FSTR(s) (__extension__({static const __flash char __c[] = (s); &__c[0];}))
-#   define AVR(x) x
+#   define AVR_ONLY(x) x
 #else
 #   define FSTR(s) (s)
-#   define AVR(x)
+#   define AVR_ONLY(x)
 #endif // __AVR_ARCH__
 
 static int internal_overflow(struct esh const * esh, char const * buffer);
@@ -42,6 +43,7 @@ static int make_arg_array(struct esh * esh);
 void esh_init(struct esh * esh)
 {
     memset(esh, 0, sizeof(*esh));
+    esh->overflow = internal_overflow;
 }
 
 
@@ -99,7 +101,7 @@ static void execute_command(struct esh * esh)
 
 static void handle_char(struct esh * esh, char c)
 {
-    bool is_bksp = (c == '\b');
+    bool is_bksp = (c == 8 || c == 127);
 
     // esh->cnt == ESH_BUFFER_LEN means we're *right* at the limit, and the
     // user can still backspace the last character. Beyond that, the last
@@ -108,12 +110,12 @@ static void handle_char(struct esh * esh, char c)
     if (esh->cnt > ESH_BUFFER_LEN || (esh->cnt == ESH_BUFFER_LEN && !is_bksp)) {
         esh->cnt = ESH_BUFFER_LEN + 1;
         esh->buffer[ESH_BUFFER_LEN] = 0;
-        esh_overflow(esh, esh->buffer);
+        esh->overflow(esh, esh->buffer);
         return;
     }
 
     if (is_bksp) {
-        --esh_cnt;
+        --esh->cnt;
     } else {
         esh->buffer[esh->cnt] = c;
         ++esh->cnt;
@@ -129,7 +131,7 @@ static void print_prompt(struct esh * esh)
     // the entire printed string, we iterate through it here. Code space is way
     // cheaper than RAM on microcontrollers.
 
-    char const AVR(__flash) * const prompt = FSTR(ESH_PROMPT);
+    char const AVR_ONLY(__flash) * const prompt = FSTR(ESH_PROMPT);
 
     for (size_t i = 0; prompt[i]; ++i) {
         char c_as_string[2] = {prompt[i], 0};
@@ -147,7 +149,7 @@ static int internal_overflow(struct esh const * esh, char const * buffer)
     // cheaper than RAM on microcontrollers.
 
     (void) buffer;
-    char const AVR(__flash) * const err = FSTR("\n\nesh: command buffer overflow\n");
+    char const AVR_ONLY(__flash) * const err = FSTR("\n\nesh: command buffer overflow\n");
 
     for (size_t i = 0; err[i]; ++i) {
         char c_as_string[2] = {err[i], 0};
@@ -158,28 +160,45 @@ static int internal_overflow(struct esh const * esh, char const * buffer)
 }
 
 
-// TODO: add quoting
 static int make_arg_array(struct esh * esh)
 {
     int argc = 0;
     bool last_was_space = true;
+    size_t dest = 0;
+    char quote = 0;
 
     for (size_t i = 0; i < esh->cnt; ++i) {
-        if (isspace(esh->buffer[i])) {
-            esh->buffer[i] = 0;
-            last_was_space = true;
-        } else {
-            if (last_was_space) {
-                if (argc < ESH_ARGC_MAX) {
-                    esh->argv[argc] = &esh->buffer[i];
-                }
-                ++argc;
+        if (quote) {
+            if (esh->buffer[i] == quote) {
+                quote = 0;
+            } else {
+                esh->buffer[dest] = esh->buffer[i];
+                ++dest;
             }
             last_was_space = false;
+        } else {
+            if (isspace(esh->buffer[i])) {
+                last_was_space = true;
+                esh->buffer[dest] = 0;
+                ++dest;
+            } else {
+                if (last_was_space) {
+                    if (argc < ESH_ARGC_MAX) {
+                        esh->argv[argc] = &esh->buffer[i];
+                    }
+                    ++argc;
+                }
+                if (esh->buffer[i] == '\'' || esh->buffer[i] == '\"') {
+                    quote = esh->buffer[i];
+                } else {
+                    esh->buffer[dest] = esh->buffer[i];
+                    ++dest;
+                }
+                last_was_space = false;
+            }
         }
     }
+    esh->buffer[dest] = 0;
     esh->buffer[ESH_BUFFER_LEN] = 0;
     return argc;
 }
-
-#endif // ESH_H
