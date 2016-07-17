@@ -27,6 +27,7 @@
 #include "esh_config.h"
 #include <stddef.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 struct esh;
 
@@ -63,7 +64,7 @@ struct esh {
     esh_callback callback;
     esh_print print;
     esh_overflow overflow;
-    bool last_was_cr;
+    uint_fast8_t flags;
 };
 
 /**

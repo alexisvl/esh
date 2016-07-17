@@ -34,6 +34,11 @@
 #   define AVR_ONLY(x)
 #endif // __AVR_ARCH__
 
+enum esh_flags {
+    IN_ESCAPE = 0x01,
+    IN_BRACKET_ESCAPE = 0x02,
+};
+
 static int internal_overflow(struct esh const * esh, char const * buffer);
 static void execute_command(struct esh * esh);
 static void handle_char(struct esh * esh, char c);
@@ -69,16 +74,31 @@ void esh_rx(struct esh * esh, char c)
 {
     char c_as_string[2] = {c, 0};
 
-    switch (c) {
-    case 0:
-        break;
-    case '\n':
-        esh->print(esh, c_as_string);
-        execute_command(esh);
-        break;
-    default:
-        handle_char(esh, c);
-        break;
+    if (esh->flags & IN_BRACKET_ESCAPE) {
+        if (isalpha(c)) {
+            esh->flags &= ~(IN_ESCAPE | IN_BRACKET_ESCAPE);
+        }
+    } else if (esh->flags & IN_ESCAPE) {
+        if (c == '[' || c == 'O') {
+            esh->flags |= IN_BRACKET_ESCAPE;
+        } else {
+            esh->flags &= ~IN_ESCAPE;
+        }
+    } else {
+        switch (c) {
+            case 0:
+                break;
+            case 0x1b:
+                esh->flags |= IN_ESCAPE;
+                break;
+            case '\n':
+                esh->print(esh, c_as_string);
+                execute_command(esh);
+                break;
+            default:
+                handle_char(esh, c);
+                break;
+        }
     }
 }
 
