@@ -44,6 +44,8 @@ static void execute_command(struct esh * esh);
 static void handle_char(struct esh * esh, char c);
 static void print_prompt(struct esh * esh);
 static int make_arg_array(struct esh * esh);
+static void esh_putc(struct esh * esh, char c);
+static void esh_puts_F(struct esh * esh, char const AVR_ONLY(__flash) * s);
 
 void esh_init(struct esh * esh)
 {
@@ -72,8 +74,6 @@ void esh_register_overflow_callback(struct esh * esh, esh_overflow overflow)
 
 void esh_rx(struct esh * esh, char c)
 {
-    char c_as_string[2] = {c, 0};
-
     if (esh->flags & IN_BRACKET_ESCAPE) {
         if (isalpha(c)) {
             esh->flags &= ~(IN_ESCAPE | IN_BRACKET_ESCAPE);
@@ -92,7 +92,7 @@ void esh_rx(struct esh * esh, char c)
                 esh->flags |= IN_ESCAPE;
                 break;
             case '\n':
-                esh->print(esh, c_as_string);
+                esh_putc(esh, c);
                 execute_command(esh);
                 break;
             default:
@@ -137,8 +137,7 @@ static void handle_char(struct esh * esh, char c)
         esh->print(esh, "\b \b");
         --esh->cnt;
     } else {
-        char c_as_string[] = {c, 0};
-        esh->print(esh, c_as_string);
+        esh_putc(esh, c);
         esh->buffer[esh->cnt] = c;
         ++esh->cnt;
     }
@@ -147,37 +146,14 @@ static void handle_char(struct esh * esh, char c)
 
 static void print_prompt(struct esh * esh)
 {
-    // The print callback only needs to take a standard C string - it doesn't
-    // have to understand avr-gcc named address spaces on that platform. The
-    // string is always passed in RAM. To avoid spending so much RAM to contain
-    // the entire printed string, we iterate through it here. Code space is way
-    // cheaper than RAM on microcontrollers.
-
-    char const AVR_ONLY(__flash) * const prompt = FSTR(ESH_PROMPT);
-
-    for (size_t i = 0; prompt[i]; ++i) {
-        char c_as_string[2] = {prompt[i], 0};
-        esh->print(esh, c_as_string);
-    }
+    esh_puts_F(esh, FSTR(ESH_PROMPT));
 }
 
 
 static int internal_overflow(struct esh const * esh, char const * buffer)
 {
-    // The print callback only needs to take a standard C string - it doesn't
-    // have to understand avr-gcc named address spaces on that platform. The
-    // string is always passed in RAM. To avoid spending so much RAM to contain
-    // the entire printed string, we iterate through it here. Code space is way
-    // cheaper than RAM on microcontrollers.
-
     (void) buffer;
-    char const AVR_ONLY(__flash) * const err = FSTR("\n\nesh: command buffer overflow\n");
-
-    for (size_t i = 0; err[i]; ++i) {
-        char c_as_string[2] = {err[i], 0};
-        esh->print(esh, c_as_string);
-    }
-
+    esh_puts_F(esh, FSTR("\n\nesh: command buffer overflow\n"));
     return 0;
 }
 
@@ -244,4 +220,19 @@ static int make_arg_array(struct esh * esh)
     esh->buffer[dest] = 0;
     esh->buffer[ESH_BUFFER_LEN] = 0;
     return argc;
+}
+
+
+static void esh_putc(struct esh * esh, char c)
+{
+    char c_as_string[] = {c, 0};
+    esh->print(esh, c_as_string);
+}
+
+
+static void esh_puts_F(struct esh * esh, char const AVR_ONLY(__flash) * s)
+{
+    for (size_t i = 0; s[i]; ++i) {
+        esh_putc(esh, s[i]);
+    }
 }
