@@ -160,6 +160,27 @@ static int internal_overflow(struct esh const * esh, char const * buffer)
 }
 
 
+/**
+ * Map the buffer to the argv array, and return argc. If argc exceeds the
+ * maximum, the full buffer will still be processed; argument pointers will
+ * just not be stored beyond the maximum. The number that would have been
+ * stored is returned.
+ *
+ * Handles whitespace and quotes. Following is the buffer before and after
+ * processing (# for NUL), with pointers stored in argv[] marked with ^
+ *
+ *
+ * before: git   config user.name "My Name"
+ * after:  git###config#user.name#My Name#
+ * argv:   ^     ^      ^         ^
+ *
+ * Rearranging the buffer is necessary because quotes can occur in the
+ * middle of arguments. For example:
+ *
+ * before: why" would you ever"'"'"do this??"
+ * after:  why would you ever"do this??#
+ * argv:   ^
+ */
 static int make_arg_array(struct esh * esh)
 {
     int argc = 0;
