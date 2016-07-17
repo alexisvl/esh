@@ -1,0 +1,44 @@
+esh - embedded shell
+====================
+
+This is a very simple embedded 'shell' for microcontroller use, for
+implementing debug UART consoles and such.
+
+
+Configuration
+=============
+
+esh expects a file called esh_config.h to be on the quoted include path. It
+should define the following:
+
+#define ESH_PROMPT      "% "        // Prompt string
+#define ESH_BUFFER_LEN  200         // Maximum length of a command. In practice
+                                    // commands can be longer - whitespace is
+                                    // collapsed.
+#define ESH_ARGC_MAX    10          // Maximum argument count.
+
+
+Then, to use esh, include esh.h, and make sure to call the following setup
+functions (fully documented in esh.h):
+
+esh_init();
+esh_register_callback(void (*callback)(int argc, char const * const * argv));
+esh_register_print(void (*print)(char const *s));
+
+
+Optionally, you can call the following as well:
+
+esh_register_overflow_callback(int (*callback)(char const * buffer));
+
+
+Then, as characters are received from your serial interface, feed them in with:
+
+esh_rx(char c);
+
+
+AVR memory spaces
+=================
+
+When compiling for AVR, esh automatically uses flash memory for storage of
+strings and constant data. This makes use of the named memory spaces in recent
+versions of avr-gcc.
