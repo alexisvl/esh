@@ -35,7 +35,7 @@ struct esh;
  * @param argc - number of arguments, including the command name
  * @param argv - arguments
  */
-typedef void (*esh_callback)(int argc, char const * const * argv);
+typedef void (*esh_callback)(int argc, char ** argv);
 
 /**
  * Callback to print a character.
@@ -59,7 +59,7 @@ typedef int (*esh_overflow)(struct esh const * esh, char const * buffer);
 struct esh {
     char buffer[ESH_BUFFER_LEN + 1];
     size_t cnt;
-    char const * argv[ESH_ARGC_MAX];
+    char * argv[ESH_ARGC_MAX];
     esh_callback callback;
     esh_print print;
     esh_overflow overflow;
