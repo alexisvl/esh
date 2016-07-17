@@ -12,28 +12,33 @@ esh expects a file called esh_config.h to be on the quoted include path. It
 should define the following:
 
 #define ESH_PROMPT      "% "        // Prompt string
-#define ESH_BUFFER_LEN  200         // Maximum length of a command. In practice
-                                    // commands can be longer - whitespace is
-                                    // collapsed.
-#define ESH_ARGC_MAX    10          // Maximum argument count.
+#define ESH_BUFFER_LEN  200         // Maximum length of a command
+#define ESH_ARGC_MAX    10          // Maximum argument count
 
 
-Then, to use esh, include esh.h, and make sure to call the following setup
-functions (fully documented in esh.h):
+Then, to use esh, include esh.h, define a "struct esh" for each esh instance you
+want, and make sure to call the following setup functions (fully documented in
+esh.h):
 
-esh_init();
-esh_register_callback(void (*callback)(int argc, char const * const * argv));
-esh_register_print(void (*print)(char const *s));
+esh_init(struct esh * esh);
+esh_register_callback(
+    struct esh * esh,
+    void (*callback)(int argc, char const * const * argv));
+esh_register_print(
+    struct esh * esh,
+    void (*print)(struct esh const * esh, char const * s));
 
 
 Optionally, you can call the following as well:
 
-esh_register_overflow_callback(int (*callback)(char const * buffer));
+esh_register_overflow_callback(
+    struct esh * esh,
+    int (*callback)(struct esh const * esh, char const * buffer));
 
 
 Then, as characters are received from your serial interface, feed them in with:
 
-esh_rx(char c);
+esh_rx(struct esh * esh, char c);
 
 
 AVR memory spaces
