@@ -44,8 +44,8 @@ static void execute_command(struct esh * esh);
 static void handle_char(struct esh * esh, char c);
 static void print_prompt(struct esh * esh);
 static int make_arg_array(struct esh * esh);
-static void esh_putc(struct esh * esh, char c);
-static void esh_puts_F(struct esh * esh, char const AVR_ONLY(__flash) * s);
+static void esh_putc(struct esh const * esh, char c);
+static void esh_puts_F(struct esh const * esh, char const AVR_ONLY(__flash) * s);
 
 void esh_init(struct esh * esh)
 {
@@ -134,8 +134,10 @@ static void handle_char(struct esh * esh, char c)
     }
 
     if (is_bksp) {
-        esh->print(esh, "\b \b");
-        --esh->cnt;
+        if (esh->cnt) {
+            esh->print(esh, "\b \b");
+            --esh->cnt;
+        }
     } else {
         esh_putc(esh, c);
         esh->buffer[esh->cnt] = c;
@@ -223,14 +225,14 @@ static int make_arg_array(struct esh * esh)
 }
 
 
-static void esh_putc(struct esh * esh, char c)
+static void esh_putc(struct esh const * esh, char c)
 {
     char c_as_string[] = {c, 0};
     esh->print(esh, c_as_string);
 }
 
 
-static void esh_puts_F(struct esh * esh, char const AVR_ONLY(__flash) * s)
+static void esh_puts_F(struct esh const * esh, char const AVR_ONLY(__flash) * s)
 {
     for (size_t i = 0; s[i]; ++i) {
         esh_putc(esh, s[i]);
