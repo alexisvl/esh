@@ -8,7 +8,7 @@ implementing debug UART consoles and such.
 Configuring esh
 ---------------
 
-esh expects a file called esh_config.h to be on the quoted include path. It
+esh expects a file called `esh_config.h` to be on the quoted include path. It
 should define the following:
 
     #define ESH_PROMPT      "% "        // Prompt string
@@ -47,12 +47,15 @@ Compiling esh
 esh has no build script of its own; building it is trivial and it's meant to be
 integrated directly into your project.
 
-To build esh, simply ensure that the esh subdirectory is on the include path,
-and that all esh source files are built (whether or not you use the features
-they define - they may define stubs for unused features). On AVR, esh requires
-`-std=gnu99` or `-std=gnu11`; on other platforms `-std=c99` or `-std=c11` will
-suffice. esh should generally compile quietly with most warning settings,
-including `-Wall -Wextra -pedantic`.
+1. Put the `esh` subdirectory on the include path.
+2. Make sure `esh_config.h` is on the quoted include path.
+3. Make sure selected C standard is `c99` or `c11`, or for AVR,
+    `gnu99` or `gnu11` (GCC extensions are used for handling multiple
+    memory spaces).
+4. Include *all* esh C source files in the build.
+
+esh should compile quietly with most warning settings, including
+`-Wall -Wextra -pedantic`.
 
 Optional features
 =================
