@@ -23,17 +23,17 @@ esh.h):
     esh_init(struct esh * esh);
     esh_register_callback(
         struct esh * esh,
-        void (*callback)(int argc, char const * const * argv));
+        void (*callback)(struct esh * esh, int argc, char ** argv));
     esh_register_print(
         struct esh * esh,
-        void (*print)(struct esh const * esh, char const * s));
+        void (*print)(struct esh * esh, char const * s));
 
 
 Optionally, you can call the following as well:
 
     esh_register_overflow_callback(
         struct esh * esh,
-        int (*callback)(struct esh const * esh, char const * buffer));
+        int (*callback)(struct esh * esh, char const * buffer));
 
 
 Then, as characters are received from your serial interface, feed them in with:

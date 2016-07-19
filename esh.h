@@ -39,7 +39,7 @@ struct esh;
  * @param argc - number of arguments, including the command name
  * @param argv - arguments
  */
-typedef void (*esh_callback)(int argc, char ** argv);
+typedef void (*esh_callback)(struct esh * esh, int argc, char ** argv);
 
 /**
  * Callback to print a character.

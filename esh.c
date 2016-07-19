@@ -180,7 +180,7 @@ static void execute_command(struct esh * esh)
     if (argc > ESH_ARGC_MAX) {
         esh->overflow(esh, esh->buffer);
     } else if (argc > 0) {
-        esh->callback(argc, esh->argv);
+        esh->callback(esh, argc, esh->argv);
     }
 
     esh->cnt = 0;
