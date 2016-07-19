@@ -21,36 +21,31 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#define ESH_INTERNAL
 #include <esh.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
-
-#ifdef __AVR_ARCH__
-#   define FSTR(s) (__extension__({static const __flash char __c[] = (s); &__c[0];}))
-#   define AVR_ONLY(x) x
-#else
-#   define FSTR(s) (s)
-#   define AVR_ONLY(x)
-#endif // __AVR_ARCH__
+#include <stdlib.h>
 
 enum esh_flags {
     IN_ESCAPE = 0x01,
     IN_BRACKET_ESCAPE = 0x02,
 };
 
-static int internal_overflow(struct esh const * esh, char const * buffer);
+static int internal_overflow(struct esh * esh, char const * buffer);
 static void execute_command(struct esh * esh);
 static void handle_char(struct esh * esh, char c);
-static void print_prompt(struct esh * esh);
+static void handle_esc(struct esh * esh, char esc);
+static void handle_ctrl(struct esh * esh, char c);
 static int make_arg_array(struct esh * esh);
-static void esh_putc(struct esh const * esh, char c);
-static void esh_puts_F(struct esh const * esh, char const AVR_ONLY(__flash) * s);
 
-void esh_init(struct esh * esh)
+bool esh_init(struct esh * esh)
 {
     memset(esh, 0, sizeof(*esh));
     esh->overflow = internal_overflow;
+
+    return esh_hist_init(esh);
 }
 
 
@@ -77,6 +72,7 @@ void esh_rx(struct esh * esh, char c)
     if (esh->flags & IN_BRACKET_ESCAPE) {
         if (isalpha(c)) {
             esh->flags &= ~(IN_ESCAPE | IN_BRACKET_ESCAPE);
+            handle_esc(esh, c);
         }
     } else if (esh->flags & IN_ESCAPE) {
         if (c == '[' || c == 'O') {
@@ -85,26 +81,100 @@ void esh_rx(struct esh * esh, char c)
             esh->flags &= ~IN_ESCAPE;
         }
     } else {
-        switch (c) {
-            case 0:
-                break;
-            case 0x1b:
-                esh->flags |= IN_ESCAPE;
-                break;
-            case '\n':
-                esh_putc(esh, c);
-                execute_command(esh);
-                break;
-            default:
-                handle_char(esh, c);
-                break;
+        if (isprint(c)) {
+            handle_char(esh, c);
+        } else {
+            handle_ctrl(esh, c);
         }
+    }
+}
+
+
+static void handle_ctrl(struct esh * esh, char c)
+{
+    switch (c) {
+        case 27: // escape
+            esh->flags |= IN_ESCAPE;
+            break;
+        case 3:  // ^C
+            esh_puts(esh, FSTR("^C\n"));
+            esh_print_prompt(esh);
+            esh->cnt = 0;
+            break;
+        case '\n':
+            execute_command(esh);
+            break;
+        case 8:     // backspace
+        case 127:   // delete
+            esh_hist_substitute(esh);
+            if (esh->cnt > 0 && esh->cnt <= ESH_BUFFER_LEN) {
+                esh_puts(esh, FSTR("\b \b"));
+                --esh->cnt;
+            }
+            break;
+        default:
+            // nop
+            ;
+    }
+}
+
+
+static void handle_esc(struct esh * esh, char esc)
+{
+    switch (esc) {
+    case 'A': // UP
+        {
+            ++esh->hist.idx;
+            int offset = esh_hist_nth(esh, esh->hist.idx - 1);
+            if (offset >= 0) {
+                esh_hist_print(esh, offset);
+            } else {
+                // Don't overscroll the top
+                --esh->hist.idx;
+            }
+            break;
+        }
+    case 'B': // DOWN
+        {
+            if (esh->hist.idx) {
+                --esh->hist.idx;
+            }
+            if (esh->hist.idx) {
+                int offset = esh_hist_nth(esh, esh->hist.idx - 1);
+                esh_hist_print(esh, offset);
+            } else {
+                esh_hist_restore(esh);
+            }
+            break;
+        }
+    case 'H': //home
+    case 'F': //end
+    default:
+        break;
     }
 }
 
 
 static void execute_command(struct esh * esh)
 {
+    esh_hist_substitute(esh);
+    esh_putc(esh, '\n');
+
+    // Have to add to the history buffer before make_arg_array messes it up.
+    // However, we do not want to add empty commands.
+    bool cmd_is_nop = true;
+    esh->buffer[esh->cnt] = 0;
+    for (size_t i = 0; esh->buffer[i]; ++i) {
+        if (!isspace(esh->buffer[i])) {
+            cmd_is_nop = false;
+            break;
+        }
+    }
+
+    if (!cmd_is_nop) {
+        esh_hist_add(esh, esh->buffer);
+    }
+
     int argc = make_arg_array(esh);
 
     if (argc > ESH_ARGC_MAX) {
@@ -114,48 +184,37 @@ static void execute_command(struct esh * esh)
     }
 
     esh->cnt = 0;
-    print_prompt(esh);
+    esh_print_prompt(esh);
 }
 
 
 static void handle_char(struct esh * esh, char c)
 {
-    bool is_bksp = (c == 8 || c == 127);
+    esh_hist_substitute(esh);
 
-    // esh->cnt == ESH_BUFFER_LEN means we're *right* at the limit, and the
-    // user can still backspace the last character. Beyond that, the last
-    // character has been lost and it doesn't make much sense to backspace
-    // it.
-    if (esh->cnt > ESH_BUFFER_LEN || (esh->cnt == ESH_BUFFER_LEN && !is_bksp)) {
+    if (esh->cnt >= ESH_BUFFER_LEN) {
         esh->cnt = ESH_BUFFER_LEN + 1;
         esh->buffer[ESH_BUFFER_LEN] = 0;
         esh->overflow(esh, esh->buffer);
         return;
     }
 
-    if (is_bksp) {
-        if (esh->cnt) {
-            esh->print(esh, "\b \b");
-            --esh->cnt;
-        }
-    } else {
-        esh_putc(esh, c);
-        esh->buffer[esh->cnt] = c;
-        ++esh->cnt;
-    }
+    esh_putc(esh, c);
+    esh->buffer[esh->cnt] = c;
+    ++esh->cnt;
 }
 
 
-static void print_prompt(struct esh * esh)
+void esh_print_prompt(struct esh * esh)
 {
-    esh_puts_F(esh, FSTR(ESH_PROMPT));
+    esh_puts(esh, FSTR(ESH_PROMPT));
 }
 
 
-static int internal_overflow(struct esh const * esh, char const * buffer)
+static int internal_overflow(struct esh * esh, char const * buffer)
 {
     (void) buffer;
-    esh_puts_F(esh, FSTR("\n\nesh: command buffer overflow\n"));
+    esh_puts(esh, FSTR("\n\nesh: command buffer overflow\n"));
     return 0;
 }
 
@@ -225,16 +284,18 @@ static int make_arg_array(struct esh * esh)
 }
 
 
-static void esh_putc(struct esh const * esh, char c)
+bool esh_putc(struct esh * esh, char c)
 {
     char c_as_string[] = {c, 0};
     esh->print(esh, c_as_string);
+    return false;
 }
 
 
-static void esh_puts_F(struct esh const * esh, char const AVR_ONLY(__flash) * s)
+bool esh_puts(struct esh * esh, char const AVR_ONLY(__memx) * s)
 {
     for (size_t i = 0; s[i]; ++i) {
         esh_putc(esh, s[i]);
     }
+    return false;
 }

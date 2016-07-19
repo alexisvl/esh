@@ -41,6 +41,31 @@ Then, as characters are received from your serial interface, feed them in with:
 esh_rx(struct esh * esh, char c);
 
 
+History
+=======
+
+esh supports history, using a ring buffer to store a fixed number of characters
+(so more commands if they're shorter). To use history, define the following
+in esh_config.h:
+
+#define ESH_HIST_ALLOC  STATIC      // STATIC, MANUAL, or MALLOC
+#define ESH_HIST_LEN    512         // Length. Use powers of 2 for efficiency
+
+If you chose MANUAL allocation, call esh_set_buffer() once you have allocated
+the buffer:
+
+esh_set_histbuf(struct esh * esh, char * buffer);
+
+Manual allocation was created for one specific purpose - history buffer in
+external SRAM on AVR (the compiler and malloc don't generally know about
+external SRAM unless you jump through hoops). However, it's there for
+whatever you like :)
+
+WARNING: static allocation is only valid when using a SINGLE esh instance.
+Using multiple esh instances with static allocation is undefined and will make
+demons fly out your nose.
+
+
 AVR memory spaces
 =================
 

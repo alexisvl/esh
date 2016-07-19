@@ -25,6 +25,9 @@
 #define ESH_H
 
 #include "esh_config.h"
+#define ESH_INTERNAL_INCLUDE
+#include <esh_hist.h>
+#undef ESH_INTERNAL_INCLUDE
 #include <stddef.h>
 #include <stdbool.h>
 #include <inttypes.h>
@@ -43,7 +46,7 @@ typedef void (*esh_callback)(int argc, char ** argv);
  * @param esh - the esh instance calling
  * @param s - the string to print
  */
-typedef void (*esh_print)(struct esh const * esh, char const * s);
+typedef void (*esh_print)(struct esh * esh, char const * s);
 
 /**
  * Callback to notify about overflow.
@@ -51,7 +54,7 @@ typedef void (*esh_print)(struct esh const * esh, char const * s);
  * @param buffer - the internal buffer, NUL-terminated
  * @return TODO document this
  */
-typedef int (*esh_overflow)(struct esh const * esh, char const * buffer);
+typedef int (*esh_overflow)(struct esh * esh, char const * buffer);
 
 /**
  * @internal
@@ -65,13 +68,16 @@ struct esh {
     esh_print print;
     esh_overflow overflow;
     uint_fast8_t flags;
+    struct esh_hist hist;
 };
 
 /**
  * Initialize esh. Must be called before any other functions.
  * @param esh - esh instance
+ * @return true on error. Can only return true when using malloc to allocate
+ * history buffer; in all other cases you can ignore the return value.
  */
-void esh_init(struct esh * esh);
+bool esh_init(struct esh * esh);
 
 /**
  * Register a callback to execute a command.
@@ -93,5 +99,46 @@ void esh_register_overflow_callback(struct esh * esh, esh_overflow overflow);
  * Pass in a character that was received.
  */
 void esh_rx(struct esh * esh, char c);
+
+/**
+ * Set the location of the history buffer, if ESH_HIST_ALLOC is defined and
+ * set to MANUAL. If ESH_HIST_ALLOC is not defined or not set to MANUAL, this
+ * is a no-op.
+ */
+void esh_set_histbuf(struct esh * esh, char * buffer);
+
+/******************************************************************************
+ * INTERNAL FUNCTIONS shared by esh.c and esh_hist.c
+ */
+
+#ifdef ESH_INTERNAL
+#ifdef __AVR_ARCH__
+#   define FSTR(s) (__extension__({static const __flash char __c[] = (s); &__c[0];}))
+#   define AVR_ONLY(x) x
+#else
+#   define FSTR(s) (s)
+#   define AVR_ONLY(x)
+#endif // __AVR_ARCH__
+
+/**
+ * @internal
+ * Print one character.
+ * @return false (allows it to be an esh_hist_for_each_char callback)
+ */
+bool esh_putc(struct esh * esh, char c);
+
+/**
+ * @internal
+ * Print a string, using __memx on AVR.
+ */
+bool esh_puts(struct esh * esh, char const AVR_ONLY(__memx) * s);
+
+/**
+ * @internal
+ * Print the prompt
+ */
+void esh_print_prompt(struct esh * esh);
+
+#endif // ESH_INTERNAL
 
 #endif // ESH_H
