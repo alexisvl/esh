@@ -78,7 +78,7 @@ void esh_rx(struct esh * esh, char c)
         if (c == '[' || c == 'O') {
             esh->flags |= IN_BRACKET_ESCAPE;
         } else {
-            esh->flags &= ~IN_ESCAPE;
+            esh->flags &= ~(IN_ESCAPE | IN_BRACKET_ESCAPE);
         }
     } else {
         if (isprint(c)) {
