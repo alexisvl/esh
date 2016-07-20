@@ -39,6 +39,7 @@ static void handle_char(struct esh * esh, char c);
 static void handle_esc(struct esh * esh, char esc);
 static void handle_ctrl(struct esh * esh, char c);
 static int make_arg_array(struct esh * esh);
+static void ins_del(struct esh * esh, char c);
 
 bool esh_init(struct esh * esh)
 {
@@ -113,11 +114,7 @@ static void handle_ctrl(struct esh * esh, char c)
                     --esh->cnt;
                     --esh->ins;
                 } else if (esh->ins) {
-                    memmove(&esh->buffer[esh->ins - 1], &esh->buffer[esh->ins],
-                            esh->cnt - esh->ins);
-                    --esh->cnt;
-                    --esh->ins;
-                    esh_restore(esh);
+                    ins_del(esh, 0);
                 }
             }
             break;
@@ -226,12 +223,7 @@ static void handle_char(struct esh * esh, char c)
         ++esh->cnt;
         ++esh->ins;
     } else {
-        memmove(&esh->buffer[esh->ins + 1], &esh->buffer[esh->ins],
-                esh->cnt - esh->ins);
-        esh->buffer[esh->ins] = c;
-        ++esh->cnt;
-        ++esh->ins;
-        esh_restore(esh);
+        ins_del(esh, c);
     }
 }
 
@@ -343,4 +335,23 @@ void esh_restore(struct esh * esh)
     for (size_t i = esh->ins; i < esh->cnt; ++i) {
         esh_puts(esh, FSTR("\33[1D"));
     }
+}
+
+
+/**
+ * Either insert or delete a character at the current insertion point.
+ * @param esh - esh instance
+ * @param c - character to insert, or 0 to delete
+ */
+static void ins_del(struct esh * esh, char c)
+{
+    int sgn = c ? 1 : -1;
+    memmove(&esh->buffer[esh->ins + sgn], &esh->buffer[esh->ins],
+            esh->cnt - esh->ins);
+    if (c) {
+        esh->buffer[esh->ins] = c;
+    }
+    esh->cnt += sgn;
+    esh->ins += sgn;
+    esh_restore(esh);
 }
