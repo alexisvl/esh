@@ -40,6 +40,7 @@ static void handle_esc(struct esh * esh, char esc);
 static void handle_ctrl(struct esh * esh, char c);
 static int make_arg_array(struct esh * esh);
 static void ins_del(struct esh * esh, char c);
+static void cursor_move(struct esh * esh, int n);
 
 bool esh_init(struct esh * esh)
 {
@@ -159,8 +160,14 @@ static void handle_esc(struct esh * esh, char esc)
             esh_puts(esh, FSTR(ESC_CURSOR_LEFT));
         }
         break;
-    case 'H': //home
-    case 'F': //end
+    case 'H': // HOME
+        cursor_move(esh, -esh->ins);
+        esh->ins = 0;
+        break;
+    case 'F': // END
+        cursor_move(esh, esh->cnt - esh->ins);
+        esh->ins = esh->cnt;
+        break;
     default:
         break;
     }
@@ -319,7 +326,17 @@ void esh_restore(struct esh * esh)
     esh_puts(esh, esh->buffer);
     // Move cursor back again to the insertion point. Easier to loop than to
     // printf the number into the esc sequence...
-    for (size_t i = esh->ins; i < esh->cnt; ++i) {
+    cursor_move(esh, -(int)(esh->cnt - esh->ins));
+}
+
+
+static void cursor_move(struct esh * esh, int n)
+{
+    for ( ; n > 0; --n) {
+        esh_puts(esh, FSTR(ESC_CURSOR_RIGHT));
+    }
+
+    for ( ; n < 0; ++n) {
         esh_puts(esh, FSTR(ESC_CURSOR_LEFT));
     }
 }
