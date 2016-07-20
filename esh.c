@@ -122,32 +122,33 @@ static void handle_ctrl(struct esh * esh, char c)
 
 static void handle_esc(struct esh * esh, char esc)
 {
+    bool vert_up = false;
+
     switch (esc) {
     case 'A': // UP
-        {
-            ++esh->hist.idx;
-            int offset = esh_hist_nth(esh, esh->hist.idx - 1);
-            if (offset >= 0) {
-                esh_hist_print(esh, offset);
-            } else {
-                // Don't overscroll the top
-                --esh->hist.idx;
-            }
-            break;
-        }
+        vert_up = true;
+        // fall through
     case 'B': // DOWN
         {
-            if (esh->hist.idx) {
+            if (vert_up) {
+                ++esh->hist.idx;
+            } else if (esh->hist.idx) {
                 --esh->hist.idx;
             }
             if (esh->hist.idx) {
                 int offset = esh_hist_nth(esh, esh->hist.idx - 1);
-                esh_hist_print(esh, offset);
+                if (offset >= 0 || !vert_up) {
+                    esh_hist_print(esh, offset);
+                } else if (vert_up) {
+                    // Don't overscroll the top
+                    --esh->hist.idx;
+                }
             } else {
                 esh_restore(esh);
             }
             break;
         }
+
     case 'C': // RIGHT
         if (esh->ins < esh->cnt) {
             ++esh->ins;
