@@ -1,6 +1,49 @@
 esh - embedded shell
 ====================
 
+esh is a lightweight command shell for embedded applications, small enough to
+be used for (and intended for) debug UART consoles on microcontrollers.
+
+Basic line editing
+------------------
+
+esh supports very basic line editing, understanding the backspace key to delete
+characters and Ctrl-C to ditch the entire line. Insertion in the middle of the
+line include left/right arrow and Ctrl-left/right is upcoming.
+
+Argument tokenizing
+-------------------
+
+esh automatically splits a command string into arguments, and understands
+bash-style quoting. The command handler callback receives a simple
+argc/argv array of arguments, ready to use. Environment variables are not yet
+supported, but may be in the future.
+
+History (optional)
+------------------
+
+If compiled in, esh supports history, allowing the use of the up/down arrow keys
+to browse previously entered commands and edit/re-issue them. A ring buffer is
+used to store a fixed number of characters, so more commands can be remembered
+if they're shorter. To use history, define the following in `esh_config.h`:
+
+    #define ESH_HIST_ALLOC  STATIC      // STATIC, MANUAL, or MALLOC
+    #define ESH_HIST_LEN    512         // Length. Use powers of 2 for efficiency
+
+If you chose `MANUAL` allocation, call `esh_set_histbuf()` once you have allocated
+the buffer:
+
+    esh_set_histbuf(struct esh * esh, char * buffer);
+
+Manual allocation was created for one specific purpose - history buffer in
+external SRAM on AVR (the compiler and malloc don't generally know about
+external SRAM unless you jump through hoops). However, it's there for
+whatever you like :)
+
+WARNING: static allocation is only valid when using a SINGLE esh instance.
+Using multiple esh instances with static allocation is undefined and will make
+demons fly out your nose.
+
 This is a very simple embedded 'shell' for microcontroller use, for
 implementing debug UART consoles and such.
 
@@ -57,29 +100,3 @@ integrated directly into your project.
 esh should compile quietly with most warning settings, including
 `-Wall -Wextra -pedantic`.
 
-Optional features
-=================
-
-History
--------
-
-esh supports history, using a ring buffer to store a fixed number of characters
-(so more commands if they're shorter). To use history, define the following
-in esh_config.h:
-
-    #define ESH_HIST_ALLOC  STATIC      // STATIC, MANUAL, or MALLOC
-    #define ESH_HIST_LEN    512         // Length. Use powers of 2 for efficiency
-
-If you chose `MANUAL` allocation, call esh_set_buffer() once you have allocated
-the buffer:
-
-    esh_set_histbuf(struct esh * esh, char * buffer);
-
-Manual allocation was created for one specific purpose - history buffer in
-external SRAM on AVR (the compiler and malloc don't generally know about
-external SRAM unless you jump through hoops). However, it's there for
-whatever you like :)
-
-WARNING: static allocation is only valid when using a SINGLE esh instance.
-Using multiple esh instances with static allocation is undefined and will make
-demons fly out your nose.
