@@ -84,12 +84,6 @@ bool esh_hist_add(struct esh * esh, char const * s);
 void esh_hist_print(struct esh * esh, int offset);
 
 /**
- * Overwrite the prompt and restore the buffer.
- * @param esh - esh instance
- */
-void esh_hist_restore(struct esh * esh);
-
-/**
  * If history is currently being browsed, substitute the selected history item
  * for the buffer and redraw the buffer for editing.
  * @param esh - esh instance

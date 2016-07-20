@@ -99,7 +99,7 @@ static void handle_ctrl(struct esh * esh, char c)
         case 3:  // ^C
             esh_puts(esh, FSTR("^C\n"));
             esh_print_prompt(esh);
-            esh->cnt = 0;
+            esh->cnt = esh->ins = 0;
             break;
         case '\n':
             execute_command(esh);
@@ -108,8 +108,17 @@ static void handle_ctrl(struct esh * esh, char c)
         case 127:   // delete
             esh_hist_substitute(esh);
             if (esh->cnt > 0 && esh->cnt <= ESH_BUFFER_LEN) {
-                esh_puts(esh, FSTR("\b \b"));
-                --esh->cnt;
+                if (esh->cnt == esh->ins) {
+                    esh_puts(esh, FSTR("\b \b"));
+                    --esh->cnt;
+                    --esh->ins;
+                } else if (esh->ins) {
+                    memmove(&esh->buffer[esh->ins - 1], &esh->buffer[esh->ins],
+                            esh->cnt - esh->ins);
+                    --esh->cnt;
+                    --esh->ins;
+                    esh_restore(esh);
+                }
             }
             break;
         default:
@@ -143,10 +152,22 @@ static void handle_esc(struct esh * esh, char esc)
                 int offset = esh_hist_nth(esh, esh->hist.idx - 1);
                 esh_hist_print(esh, offset);
             } else {
-                esh_hist_restore(esh);
+                esh_restore(esh);
             }
             break;
         }
+    case 'C': // RIGHT
+        if (esh->ins < esh->cnt) {
+            ++esh->ins;
+            esh_puts(esh, FSTR("\33[1C"));
+        }
+        break;
+    case 'D': // LEFT
+        if (esh->ins) {
+            --esh->ins;
+            esh_puts(esh, FSTR("\33[1D"));
+        }
+        break;
     case 'H': //home
     case 'F': //end
     default:
@@ -183,7 +204,7 @@ static void execute_command(struct esh * esh)
         esh->callback(esh, argc, esh->argv);
     }
 
-    esh->cnt = 0;
+    esh->cnt = esh->ins = 0;
     esh_print_prompt(esh);
 }
 
@@ -199,9 +220,19 @@ static void handle_char(struct esh * esh, char c)
         return;
     }
 
-    esh_putc(esh, c);
-    esh->buffer[esh->cnt] = c;
-    ++esh->cnt;
+    if (esh->ins == esh->cnt) {
+        esh_putc(esh, c);
+        esh->buffer[esh->cnt] = c;
+        ++esh->cnt;
+        ++esh->ins;
+    } else {
+        memmove(&esh->buffer[esh->ins + 1], &esh->buffer[esh->ins],
+                esh->cnt - esh->ins);
+        esh->buffer[esh->ins] = c;
+        ++esh->cnt;
+        ++esh->ins;
+        esh_restore(esh);
+    }
 }
 
 
@@ -298,4 +329,18 @@ bool esh_puts(struct esh * esh, char const AVR_ONLY(__memx) * s)
         esh_putc(esh, s[i]);
     }
     return false;
+}
+
+
+void esh_restore(struct esh * esh)
+{
+    esh_puts(esh, FSTR("\33[2K\r")); // Clear line
+    esh_print_prompt(esh);
+    esh->buffer[esh->cnt] = 0;
+    esh_puts(esh, esh->buffer);
+    // Move cursor back again to the insertion point. Easier to loop than to
+    // printf the number into the esc sequence...
+    for (size_t i = esh->ins; i < esh->cnt; ++i) {
+        esh_puts(esh, FSTR("\33[1D"));
+    }
 }

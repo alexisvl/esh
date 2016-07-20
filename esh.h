@@ -63,6 +63,7 @@ typedef int (*esh_overflow)(struct esh * esh, char const * buffer);
 struct esh {
     char buffer[ESH_BUFFER_LEN + 1];
     size_t cnt;
+    size_t ins;
     char * argv[ESH_ARGC_MAX];
     esh_callback callback;
     esh_print print;
@@ -138,6 +139,12 @@ bool esh_puts(struct esh * esh, char const AVR_ONLY(__memx) * s);
  * Print the prompt
  */
 void esh_print_prompt(struct esh * esh);
+
+/**
+ * Overwrite the prompt and restore the buffer.
+ * @param esh - esh instance
+ */
+void esh_restore(struct esh * esh);
 
 #endif // ESH_INTERNAL
 

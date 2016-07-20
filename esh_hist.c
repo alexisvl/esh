@@ -60,7 +60,7 @@ static void esh_hist_for_each_char(struct esh * esh, int offset,
 
 /**
  * Put the selected history item in the buffer. Make sure to call
- * esh_hist_restore afterward to display the buffer.
+ * esh_restore afterward to display the buffer.
  * @param esh - esh instance
  * @param offset - offset into the ring buffer
  */
@@ -171,22 +171,11 @@ void esh_hist_print(struct esh * esh, int offset)
 }
 
 
-void esh_hist_restore(struct esh * esh)
-{
-    // Clear the line
-    esh_puts(esh, FSTR("\33[2K\r"));
-
-    esh_print_prompt(esh);
-
-    esh->buffer[esh->cnt] = 0;
-    esh_puts(esh, esh->buffer);
-}
-
-
 static bool clobber_helper(struct esh * esh, char c)
 {
     esh->buffer[esh->cnt] = c;
     ++esh->cnt;
+    ++esh->ins;
     return false;
 }
 
@@ -198,6 +187,7 @@ static void esh_hist_clobber(struct esh * esh, int offset)
     }
 
     esh->cnt = 0;
+    esh->ins = 0;
     esh_hist_for_each_char(esh, offset, &clobber_helper);
 }
 
@@ -207,7 +197,7 @@ bool esh_hist_substitute(struct esh * esh)
     if (esh->hist.idx) {
         int offset = esh_hist_nth(esh, esh->hist.idx - 1);
         esh_hist_clobber(esh, offset);
-        esh_hist_restore(esh);
+        esh_restore(esh);
         esh->hist.idx = 0;
         return true;
     } else {
