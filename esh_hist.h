@@ -77,24 +77,6 @@ int esh_hist_nth(struct esh * esh, int n);
 bool esh_hist_add(struct esh * esh, char const * s);
 
 /**
- * Given an offset in the ring buffer, call the callback once for each
- * character in the string starting there. This is meant to abstract away
- * ring buffer access.
- *
- * @param esh - esh instance
- * @param offset - offset into the ring buffer
- * @param callback - will be called once per character
- *      - callback:param esh - esh instance
- *      - callback:param c - character
- *      - callback:return - true to stop iterating, false to continue
- *
- * Regardless of the callback's return value, iteration will always stop at NUL
- * or if the loop wraps all the way around.
- */
-void esh_hist_for_each_char(struct esh * esh, int offset,
-        bool (*callback)(struct esh * esh, char c));
-
-/**
  * Overwrite the prompt and print a history suggestion.
  * @param esh - esh instance
  * @param offset - offset into the ring buffer
@@ -106,14 +88,6 @@ void esh_hist_print(struct esh * esh, int offset);
  * @param esh - esh instance
  */
 void esh_hist_restore(struct esh * esh);
-
-/**
- * Put the selected history item in the buffer. Make sure to call
- * esh_hist_restore afterward to display the buffer.
- * @param esh - esh instance
- * @param offset - offset into the ring buffer
- */
-void esh_hist_clobber(struct esh * esh, int offset);
 
 /**
  * If history is currently being browsed, substitute the selected history item

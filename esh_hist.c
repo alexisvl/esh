@@ -40,6 +40,32 @@ static void init_buffer(char * buffer)
     buffer[0] = 0;
 }
 
+/**
+ * Given an offset in the ring buffer, call the callback once for each
+ * character in the string starting there. This is meant to abstract away
+ * ring buffer access.
+ *
+ * @param esh - esh instance
+ * @param offset - offset into the ring buffer
+ * @param callback - will be called once per character
+ *      - callback:param esh - esh instance
+ *      - callback:param c - character
+ *      - callback:return - true to stop iterating, false to continue
+ *
+ * Regardless of the callback's return value, iteration will always stop at NUL
+ * or if the loop wraps all the way around.
+ */
+static void esh_hist_for_each_char(struct esh * esh, int offset,
+        bool (*callback)(struct esh * esh, char c));
+
+/**
+ * Put the selected history item in the buffer. Make sure to call
+ * esh_hist_restore afterward to display the buffer.
+ * @param esh - esh instance
+ * @param offset - offset into the ring buffer
+ */
+static void esh_hist_clobber(struct esh * esh, int offset);
+
 bool esh_hist_init(struct esh * esh)
 {
 #if ESH_HIST_ALLOC == STATIC
@@ -61,7 +87,7 @@ bool esh_hist_init(struct esh * esh)
 #endif
 }
 
-void esh_hist_for_each_char(struct esh * esh, int offset,
+static void esh_hist_for_each_char(struct esh * esh, int offset,
         bool (*callback)(struct esh * esh, char c))
 {
     for (int i = offset;
@@ -165,7 +191,7 @@ static bool clobber_helper(struct esh * esh, char c)
 }
 
 
-void esh_hist_clobber(struct esh * esh, int offset)
+static void esh_hist_clobber(struct esh * esh, int offset)
 {
     if (offset < 0 || offset >= ESH_HIST_LEN) {
         return;
