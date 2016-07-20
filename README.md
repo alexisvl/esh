@@ -4,12 +4,12 @@ esh - embedded shell
 esh is a lightweight command shell for embedded applications, small enough to
 be used for (and intended for) debug UART consoles on microcontrollers.
 
-Basic line editing
-------------------
+Line editing
+------------
 
-esh supports very basic line editing, understanding the backspace key to delete
-characters and Ctrl-C to ditch the entire line. Insertion in the middle of the
-line include left/right arrow and Ctrl-left/right is upcoming.
+esh supports basic line editing, understanding the backspace key to delete
+characters, left and right arrow to move the insertion point, and Ctrl-C
+to ditch the entire line. Ctrl-left/right to move by a word is upcoming.
 
 Argument tokenizing
 -------------------
