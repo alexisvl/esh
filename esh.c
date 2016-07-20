@@ -109,13 +109,7 @@ static void handle_ctrl(struct esh * esh, char c)
         case 127:   // delete
             esh_hist_substitute(esh);
             if (esh->cnt > 0 && esh->cnt <= ESH_BUFFER_LEN) {
-                if (esh->cnt == esh->ins) {
-                    esh_puts(esh, FSTR("\b \b"));
-                    --esh->cnt;
-                    --esh->ins;
-                } else if (esh->ins) {
-                    ins_del(esh, 0);
-                }
+                ins_del(esh, 0);
             }
             break;
         default:
@@ -217,14 +211,7 @@ static void handle_char(struct esh * esh, char c)
         return;
     }
 
-    if (esh->ins == esh->cnt) {
-        esh_putc(esh, c);
-        esh->buffer[esh->cnt] = c;
-        ++esh->cnt;
-        ++esh->ins;
-    } else {
-        ins_del(esh, c);
-    }
+    ins_del(esh, c);
 }
 
 
@@ -346,12 +333,23 @@ void esh_restore(struct esh * esh)
 static void ins_del(struct esh * esh, char c)
 {
     int sgn = c ? 1 : -1;
+    bool move = (esh->ins != esh->cnt);
+
     memmove(&esh->buffer[esh->ins + sgn], &esh->buffer[esh->ins],
             esh->cnt - esh->ins);
+
     if (c) {
         esh->buffer[esh->ins] = c;
     }
+
     esh->cnt += sgn;
     esh->ins += sgn;
-    esh_restore(esh);
+
+    if (move) {
+        esh_restore(esh);
+    } else if (!c) {
+        esh_puts(esh, FSTR("\b \b"));
+    } else {
+        esh_putc(esh, c);
+    }
 }
