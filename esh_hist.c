@@ -161,7 +161,7 @@ bool esh_hist_add(struct esh * esh, char const * s)
 void esh_hist_print(struct esh * esh, int offset)
 {
     // Clear the line
-    esh_puts(esh, FSTR("\33[2K\r"));
+    esh_puts(esh, FSTR(ESC_ERASE_LINE "\r"));
 
     esh_print_prompt(esh);
 

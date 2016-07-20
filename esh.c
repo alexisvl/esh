@@ -150,13 +150,13 @@ static void handle_esc(struct esh * esh, char esc)
     case 'C': // RIGHT
         if (esh->ins < esh->cnt) {
             ++esh->ins;
-            esh_puts(esh, FSTR("\33[1C"));
+            esh_puts(esh, FSTR(ESC_CURSOR_RIGHT));
         }
         break;
     case 'D': // LEFT
         if (esh->ins) {
             --esh->ins;
-            esh_puts(esh, FSTR("\33[1D"));
+            esh_puts(esh, FSTR(ESC_CURSOR_LEFT));
         }
         break;
     case 'H': //home
@@ -313,14 +313,14 @@ bool esh_puts(struct esh * esh, char const AVR_ONLY(__memx) * s)
 
 void esh_restore(struct esh * esh)
 {
-    esh_puts(esh, FSTR("\33[2K\r")); // Clear line
+    esh_puts(esh, FSTR(ESC_ERASE_LINE "\r")); // Clear line
     esh_print_prompt(esh);
     esh->buffer[esh->cnt] = 0;
     esh_puts(esh, esh->buffer);
     // Move cursor back again to the insertion point. Easier to loop than to
     // printf the number into the esc sequence...
     for (size_t i = esh->ins; i < esh->cnt; ++i) {
-        esh_puts(esh, FSTR("\33[1D"));
+        esh_puts(esh, FSTR(ESC_CURSOR_LEFT));
     }
 }
 

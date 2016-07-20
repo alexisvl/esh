@@ -146,6 +146,10 @@ void esh_print_prompt(struct esh * esh);
  */
 void esh_restore(struct esh * esh);
 
+#define ESC_CURSOR_RIGHT    "\33[1C"
+#define ESC_CURSOR_LEFT     "\33[1D"
+#define ESC_ERASE_LINE      "\33[2K"
+
 #endif // ESH_INTERNAL
 
 #endif // ESH_H
