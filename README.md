@@ -47,6 +47,20 @@ demons fly out your nose.
 This is a very simple embedded 'shell' for microcontroller use, for
 implementing debug UART consoles and such.
 
+Static callbacks
+----------------
+
+If you're only using one esh instance, or all your esh instances use the same
+callbacks, callbacks can be compiled in statically, saving a bit of code space
+and runtime from keeping and following the pointers. Add the following to
+your `esh_config.h`:
+
+    #define ESH_STATIC_CALLBACKS
+
+Now, simply name your callbacks `ESH_PRINT_CALLBACK`, `ESH_CALLBACK`, and
+`ESH_OVERFLOW_CALLBACK` (the overflow callback is still optional), and the
+linker will find them.
+
 
 Configuring esh
 ---------------

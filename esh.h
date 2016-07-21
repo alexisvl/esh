@@ -34,6 +34,7 @@
 
 struct esh;
 
+#ifndef ESH_STATIC_CALLBACKS
 /**
  * Callback to handle commands.
  * @param argc - number of arguments, including the command name
@@ -55,6 +56,7 @@ typedef void (*esh_print)(struct esh * esh, char const * s);
  * @return TODO document this
  */
 typedef int (*esh_overflow)(struct esh * esh, char const * buffer);
+#endif // ESH_STATIC_CALLBACKS
 
 /**
  * @internal
@@ -62,14 +64,16 @@ typedef int (*esh_overflow)(struct esh * esh, char const * buffer);
  */
 struct esh {
     char buffer[ESH_BUFFER_LEN + 1];
+    char * argv[ESH_ARGC_MAX];
     size_t cnt;
     size_t ins;
-    char * argv[ESH_ARGC_MAX];
+    uint_fast8_t flags;
+    struct esh_hist hist;
+#ifndef ESH_STATIC_CALLBACKS
     esh_callback callback;
     esh_print print;
     esh_overflow overflow;
-    uint_fast8_t flags;
-    struct esh_hist hist;
+#endif
 };
 
 /**
@@ -80,6 +84,7 @@ struct esh {
  */
 bool esh_init(struct esh * esh);
 
+#ifndef ESH_STATIC_CALLBACKS
 /**
  * Register a callback to execute a command.
  */
@@ -95,6 +100,7 @@ void esh_register_print(struct esh * esh, esh_print print);
  * overflow handler. To reset to that, set the handler to NULL.
  */
 void esh_register_overflow_callback(struct esh * esh, esh_overflow overflow);
+#endif
 
 /**
  * Pass in a character that was received.
@@ -145,6 +151,23 @@ void esh_print_prompt(struct esh * esh);
  * @param esh - esh instance
  */
 void esh_restore(struct esh * esh);
+
+/**
+ * Call the print callback. Wrapper to avoid ifdefs for static callback.
+ */
+void esh_do_print_callback(struct esh * esh, char const * s);
+
+/**
+ * Call the main callback. Wrapper to avoid ifdefs for static callback.
+ */
+void esh_do_callback(struct esh * esh, int argc, char ** argv);
+
+/**
+ * Call the overflow callback. Wrapper to avoid ifdefs for the static
+ * callback.
+ */
+void esh_do_overflow_callback(struct esh * esh, char const * buffer);
+
 
 #define ESC_CURSOR_RIGHT    "\33[1C"
 #define ESC_CURSOR_LEFT     "\33[1D"

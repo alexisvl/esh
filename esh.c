@@ -42,12 +42,51 @@ static int make_arg_array(struct esh * esh);
 static void ins_del(struct esh * esh, char c);
 static void cursor_move(struct esh * esh, int n);
 
-bool esh_init(struct esh * esh)
-{
-    memset(esh, 0, sizeof(*esh));
-    esh->overflow = internal_overflow;
+#ifdef ESH_STATIC_CALLBACKS
+void ESH_PRINT_CALLBACK(struct esh * esh, char const * s);
+void ESH_CALLBACK(struct esh * esh, int argc, char ** argv);
 
-    return esh_hist_init(esh);
+void __attribute__((weak)) ESH_OVERFLOW_CALLBACK(struct esh * esh,
+        char const * buffer)
+{
+    internal_overflow(esh, buffer);
+}
+
+
+void esh_do_print_callback(struct esh * esh, char const * s)
+{
+    ESH_PRINT_CALLBACK(esh, s);
+}
+
+
+void esh_do_callback(struct esh * esh, int argc, char ** argv)
+{
+    ESH_CALLBACK(esh, argc, argv);
+}
+
+
+void esh_do_overflow_callback(struct esh * esh, char const * buffer)
+{
+    ESH_OVERFLOW_CALLBACK(esh, buffer);
+}
+
+#else // ESH_STATIC_CALLBACKS
+
+void esh_do_print_callback(struct esh * esh, char const * s)
+{
+    esh->print(esh, s);
+}
+
+
+void esh_do_callback(struct esh * esh, int argc, char ** argv)
+{
+    esh->callback(esh, argc, argv);
+}
+
+
+void esh_do_overflow_callback(struct esh * esh, char const * buffer)
+{
+    esh->overflow(esh, buffer);
 }
 
 
@@ -66,6 +105,18 @@ void esh_register_print(struct esh * esh, esh_print print)
 void esh_register_overflow_callback(struct esh * esh, esh_overflow overflow)
 {
     esh->overflow = (overflow ? overflow : &internal_overflow);
+}
+
+#endif // ESH_STATIC_CALLBACKS
+
+bool esh_init(struct esh * esh)
+{
+    memset(esh, 0, sizeof(*esh));
+#ifndef ESH_STATIC_CALLBACKS
+    esh->overflow = internal_overflow;
+#endif
+
+    return esh_hist_init(esh);
 }
 
 
@@ -198,9 +249,9 @@ static void execute_command(struct esh * esh)
     int argc = make_arg_array(esh);
 
     if (argc > ESH_ARGC_MAX) {
-        esh->overflow(esh, esh->buffer);
+        esh_do_overflow_callback(esh, esh->buffer);
     } else if (argc > 0) {
-        esh->callback(esh, argc, esh->argv);
+        esh_do_callback(esh, argc, esh->argv);
     }
 
     esh->cnt = esh->ins = 0;
@@ -215,7 +266,7 @@ static void handle_char(struct esh * esh, char c)
     if (esh->cnt >= ESH_BUFFER_LEN) {
         esh->cnt = ESH_BUFFER_LEN + 1;
         esh->buffer[ESH_BUFFER_LEN] = 0;
-        esh->overflow(esh, esh->buffer);
+        esh_do_overflow_callback(esh, esh->buffer);
         return;
     }
 
@@ -305,7 +356,7 @@ static int make_arg_array(struct esh * esh)
 bool esh_putc(struct esh * esh, char c)
 {
     char c_as_string[] = {c, 0};
-    esh->print(esh, c_as_string);
+    esh_do_print_callback(esh, c_as_string);
     return false;
 }
 
