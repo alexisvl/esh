@@ -173,6 +173,13 @@ void esh_do_overflow_callback(struct esh * esh, char const * buffer);
 #define ESC_CURSOR_LEFT     "\33[1D"
 #define ESC_ERASE_LINE      "\33[2K"
 
+#define ESCCHAR_UP      'A'
+#define ESCCHAR_DOWN    'B'
+#define ESCCHAR_RIGHT   'C'
+#define ESCCHAR_LEFT    'D'
+#define ESCCHAR_HOME    'H'
+#define ESCCHAR_END     'F'
+
 #endif // ESH_INTERNAL
 
 #endif // ESH_H

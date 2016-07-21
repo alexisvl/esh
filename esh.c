@@ -40,6 +40,7 @@ static void handle_esc(struct esh * esh, char esc);
 static void handle_ctrl(struct esh * esh, char c);
 static int make_arg_array(struct esh * esh);
 static void ins_del(struct esh * esh, char c);
+static void term_cursor_move(struct esh * esh, int n);
 static void cursor_move(struct esh * esh, int n);
 
 #ifdef ESH_STATIC_CALLBACKS
@@ -173,56 +174,46 @@ static void handle_ctrl(struct esh * esh, char c)
 
 static void handle_esc(struct esh * esh, char esc)
 {
-    bool vert_up = false;
+    int cdelta;
 
     switch (esc) {
-    case 'A': // UP
-        vert_up = true;
-        // fall through
-    case 'B': // DOWN
-        {
-            if (vert_up) {
-                ++esh->hist.idx;
-            } else if (esh->hist.idx) {
+    case ESCCHAR_UP:
+    case ESCCHAR_DOWN:
+        if (esc == ESCCHAR_UP) {
+            ++esh->hist.idx;
+        } else if (esh->hist.idx) {
+            --esh->hist.idx;
+        }
+        if (esh->hist.idx) {
+            int offset = esh_hist_nth(esh, esh->hist.idx - 1);
+            if (offset >= 0 || esc == ESCCHAR_DOWN) {
+                esh_hist_print(esh, offset);
+            } else if (esc == ESCCHAR_UP) {
+                // Don't overscroll the top
                 --esh->hist.idx;
             }
-            if (esh->hist.idx) {
-                int offset = esh_hist_nth(esh, esh->hist.idx - 1);
-                if (offset >= 0 || !vert_up) {
-                    esh_hist_print(esh, offset);
-                } else if (vert_up) {
-                    // Don't overscroll the top
-                    --esh->hist.idx;
-                }
-            } else {
-                esh_restore(esh);
-            }
-            break;
+        } else {
+            esh_restore(esh);
         }
+        break;
 
-    case 'C': // RIGHT
-        if (esh->ins < esh->cnt) {
-            ++esh->ins;
-            esh_puts(esh, FSTR(ESC_CURSOR_RIGHT));
-        }
-        break;
-    case 'D': // LEFT
-        if (esh->ins) {
-            --esh->ins;
-            esh_puts(esh, FSTR(ESC_CURSOR_LEFT));
-        }
-        break;
-    case 'H': // HOME
-        cursor_move(esh, -esh->ins);
-        esh->ins = 0;
-        break;
-    case 'F': // END
-        cursor_move(esh, esh->cnt - esh->ins);
-        esh->ins = esh->cnt;
-        break;
-    default:
-        break;
+    case ESCCHAR_LEFT:
+        cdelta = -1;
+        goto cmove;
+    case ESCCHAR_RIGHT:
+        cdelta = 1;
+        goto cmove;
+    case ESCCHAR_HOME:
+        cdelta = -esh->ins;
+        goto cmove;
+    case ESCCHAR_END:
+        cdelta = esh->cnt - esh->ins;
+        goto cmove;
     }
+
+    return;
+cmove: // micro-optimization, yo!
+    cursor_move(esh, cdelta);
 }
 
 
@@ -378,11 +369,14 @@ void esh_restore(struct esh * esh)
     esh_puts(esh, esh->buffer);
     // Move cursor back again to the insertion point. Easier to loop than to
     // printf the number into the esc sequence...
-    cursor_move(esh, -(int)(esh->cnt - esh->ins));
+    term_cursor_move(esh, -(int)(esh->cnt - esh->ins));
 }
 
 
-static void cursor_move(struct esh * esh, int n)
+/**
+ * Move only the terminal cursor. This does not move the insertion point.
+ */
+static void term_cursor_move(struct esh * esh, int n)
 {
     for ( ; n > 0; --n) {
         esh_puts(esh, FSTR(ESC_CURSOR_RIGHT));
@@ -391,6 +385,18 @@ static void cursor_move(struct esh * esh, int n)
     for ( ; n < 0; ++n) {
         esh_puts(esh, FSTR(ESC_CURSOR_LEFT));
     }
+}
+
+
+/**
+ * Move the esh cursor. This applies history substitution, moves the terminal
+ * cursor, and moves the insertion point.
+ */
+static void cursor_move(struct esh * esh, int n)
+{
+    esh_hist_substitute(esh);
+    term_cursor_move(esh, n);
+    esh->ins += n;
 }
 
 
