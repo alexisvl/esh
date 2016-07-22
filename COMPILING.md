@@ -72,6 +72,16 @@ Now, simply name your callbacks `ESH_PRINT_CALLBACK`, `ESH_CALLBACK`, and
 `ESH_OVERFLOW_CALLBACK` (the overflow callback is still optional), and the
 linker will find them.
 
+Note about line endings
+-----------------------
+
+Internally, esh uses strictly `\n` line endings. A great many IO sources
+use different line endings; the user is responsible for translating them for
+esh. In general, most raw-mode unix-like terminals will give `\r` from the
+keyboard and require `\r\n` as output, so your input function should
+translate `\r` to `\n`, and your output function should insert `\r` before
+`\n`.
+
 Compiling esh
 -------------
 
