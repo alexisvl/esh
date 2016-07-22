@@ -1,2 +1,4 @@
 *.o
 tags
+__pycache__
+demo/demo
