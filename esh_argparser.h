@@ -34,12 +34,8 @@
  * just not be stored beyond the maximum. The number that would have been
  * stored is returned.
  *
- * Handles whitespace, quotes, and if ESH_ENVVARS is defined, environment
- * variables. When ESH_ENVVARS is not defined, the entire buffer is processed
- * in place, with any changes leaving the length equal or shorter. Because
- * environment variable values can be longer than their names, ESH_ENVVARS
- * being defined will result in a secondary buffer being used to store the
- * resulting values.
+ * Handles whitespace and quotes. The entire buffer is processed in place,
+ * with any changes leaveing the length equal or shorter.
  *
  * Following is an example buffer before and after processing (# for NUL),
  * with pointers stored in argv[] marked with ^
@@ -55,13 +51,6 @@
  * after:  why would you ever"do this??#
  * argv:   ^
  *
- * When environment variables are supported, the first buffer is still edited;
- * it is used as a source of variable name substrings:
- *
- * before: git config user.name ${NAME}
- * after:  git config user.name NAME#
- * second: git#config#user.name#My Name#
- * argv:   ^   ^      ^         ^
  */
 int esh_parse_args(esh_t * esh);
 
