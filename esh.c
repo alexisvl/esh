@@ -331,6 +331,12 @@ static void term_cursor_move(struct esh * esh, int n)
 static void cursor_move(struct esh * esh, int n)
 {
     esh_hist_substitute(esh);
+    if ((int) esh->ins + n < 0) {
+        n = -esh->ins;
+    } else if ((int) esh->ins + n > (int) esh->cnt) {
+        n = esh->cnt - esh->ins;
+    }
+
     term_cursor_move(esh, n);
     esh->ins += n;
 }
