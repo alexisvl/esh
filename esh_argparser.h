@@ -63,6 +63,6 @@
  * second: git#config#user.name#My Name#
  * argv:   ^   ^      ^         ^
  */
-int esh_parse_args(struct esh * esh);
+int esh_parse_args(esh_t * esh);
 
 #endif // ESH_ARGPARSER_H

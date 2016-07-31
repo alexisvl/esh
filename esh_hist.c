@@ -55,8 +55,8 @@ static void init_buffer(char * buffer)
  * Regardless of the callback's return value, iteration will always stop at NUL
  * or if the loop wraps all the way around.
  */
-static void esh_hist_for_each_char(struct esh * esh, int offset,
-        bool (*callback)(struct esh * esh, char c));
+static void esh_hist_for_each_char(esh_t * esh, int offset,
+        bool (*callback)(esh_t * esh, char c));
 
 /**
  * Put the selected history item in the buffer. Make sure to call
@@ -64,9 +64,9 @@ static void esh_hist_for_each_char(struct esh * esh, int offset,
  * @param esh - esh instance
  * @param offset - offset into the ring buffer
  */
-static void esh_hist_clobber(struct esh * esh, int offset);
+static void esh_hist_clobber(esh_t * esh, int offset);
 
-bool esh_hist_init(struct esh * esh)
+bool esh_hist_init(esh_t * esh)
 {
 #if ESH_HIST_ALLOC == STATIC
     static char esh_hist[ESH_HIST_LEN] = {0};
@@ -87,8 +87,8 @@ bool esh_hist_init(struct esh * esh)
 #endif
 }
 
-static void esh_hist_for_each_char(struct esh * esh, int offset,
-        bool (*callback)(struct esh * esh, char c))
+static void esh_hist_for_each_char(esh_t * esh, int offset,
+        bool (*callback)(esh_t * esh, char c))
 {
     for (int i = offset;
             esh->hist.hist[i];
@@ -108,7 +108,7 @@ static void esh_hist_for_each_char(struct esh * esh, int offset,
 }
 
 
-int esh_hist_nth(struct esh * esh, int n)
+int esh_hist_nth(esh_t * esh, int n)
 {
     for (int i = esh->hist.tail ? esh->hist.tail - 1 : ESH_HIST_LEN - 1;
             ;
@@ -128,7 +128,7 @@ int esh_hist_nth(struct esh * esh, int n)
 }
 
 
-bool esh_hist_add(struct esh * esh, char const * s)
+bool esh_hist_add(esh_t * esh, char const * s)
 {
     int i;
 
@@ -158,7 +158,7 @@ bool esh_hist_add(struct esh * esh, char const * s)
 }
 
 
-void esh_hist_print(struct esh * esh, int offset)
+void esh_hist_print(esh_t * esh, int offset)
 {
     // Clear the line
     esh_puts(esh, FSTR(ESC_ERASE_LINE "\r"));
@@ -171,7 +171,7 @@ void esh_hist_print(struct esh * esh, int offset)
 }
 
 
-static bool clobber_helper(struct esh * esh, char c)
+static bool clobber_helper(esh_t * esh, char c)
 {
     esh->buffer[esh->cnt] = c;
     ++esh->cnt;
@@ -180,7 +180,7 @@ static bool clobber_helper(struct esh * esh, char c)
 }
 
 
-static void esh_hist_clobber(struct esh * esh, int offset)
+static void esh_hist_clobber(esh_t * esh, int offset)
 {
     if (offset < 0 || offset >= ESH_HIST_LEN) {
         return;
@@ -192,7 +192,7 @@ static void esh_hist_clobber(struct esh * esh, int offset)
 }
 
 
-bool esh_hist_substitute(struct esh * esh)
+bool esh_hist_substitute(esh_t * esh)
 {
     if (esh->hist.idx) {
         int offset = esh_hist_nth(esh, esh->hist.idx - 1);
@@ -209,7 +209,7 @@ bool esh_hist_substitute(struct esh * esh)
 
 #if defined(ESH_HIST_ALLOC) && ESH_HIST_ALLOC == MANUAL
 
-void esh_set_histbuf(struct esh * esh, char * buffer)
+void esh_set_histbuf(esh_t * esh, char * buffer)
 {
     esh->hist.hist = buffer;
     init_buffer(esh->hist.hist);
@@ -217,7 +217,7 @@ void esh_set_histbuf(struct esh * esh, char * buffer)
 
 #else // ESH_HIST_ALLOC == MANUAL
 
-void esh_set_histbuf(struct esh * esh, char * buffer)
+void esh_set_histbuf(esh_t * esh, char * buffer)
 {
     (void) esh;
     (void) buffer;

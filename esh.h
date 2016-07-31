@@ -40,14 +40,14 @@ struct esh;
  * @param argc - number of arguments, including the command name
  * @param argv - arguments
  */
-typedef void (*esh_callback)(struct esh * esh, int argc, char ** argv);
+typedef void (*esh_callback)(esh_t * esh, int argc, char ** argv);
 
 /**
  * Callback to print a character.
  * @param esh - the esh instance calling
  * @param s - the string to print
  */
-typedef void (*esh_print)(struct esh * esh, char const * s);
+typedef void (*esh_print)(esh_t * esh, char const * s);
 
 /**
  * Callback to notify about overflow.
@@ -55,14 +55,14 @@ typedef void (*esh_print)(struct esh * esh, char const * s);
  * @param buffer - the internal buffer, NUL-terminated
  * @return TODO document this
  */
-typedef int (*esh_overflow)(struct esh * esh, char const * buffer);
+typedef int (*esh_overflow)(esh_t * esh, char const * buffer);
 #endif // ESH_STATIC_CALLBACKS
 
 /**
  * @internal
  * esh instance struct.
  */
-struct esh {
+typedef struct esh {
     char buffer[ESH_BUFFER_LEN + 1];
     char * argv[ESH_ARGC_MAX];
     size_t cnt;
@@ -74,7 +74,7 @@ struct esh {
     esh_print print;
     esh_overflow overflow;
 #endif
-};
+} esh_t;
 
 /**
  * Initialize esh. Must be called before any other functions.
@@ -82,37 +82,37 @@ struct esh {
  * @return true on error. Can only return true when using malloc to allocate
  * history buffer; in all other cases you can ignore the return value.
  */
-bool esh_init(struct esh * esh);
+bool esh_init(esh_t * esh);
 
 #ifndef ESH_STATIC_CALLBACKS
 /**
  * Register a callback to execute a command.
  */
-void esh_register_callback(struct esh * esh, esh_callback callback);
+void esh_register_callback(esh_t * esh, esh_callback callback);
 
 /**
  * Register a callback to print a character.
  */
-void esh_register_print(struct esh * esh, esh_print print);
+void esh_register_print(esh_t * esh, esh_print print);
 
 /**
  * Register a callback to notify about overflow. Optional; esh has an internal
  * overflow handler. To reset to that, set the handler to NULL.
  */
-void esh_register_overflow_callback(struct esh * esh, esh_overflow overflow);
+void esh_register_overflow_callback(esh_t * esh, esh_overflow overflow);
 #endif
 
 /**
  * Pass in a character that was received.
  */
-void esh_rx(struct esh * esh, char c);
+void esh_rx(esh_t * esh, char c);
 
 /**
  * Set the location of the history buffer, if ESH_HIST_ALLOC is defined and
  * set to MANUAL. If ESH_HIST_ALLOC is not defined or not set to MANUAL, this
  * is a no-op.
  */
-void esh_set_histbuf(struct esh * esh, char * buffer);
+void esh_set_histbuf(esh_t * esh, char * buffer);
 
 /******************************************************************************
  * INTERNAL FUNCTIONS shared by esh.c and esh_hist.c
@@ -132,41 +132,41 @@ void esh_set_histbuf(struct esh * esh, char * buffer);
  * Print one character.
  * @return false (allows it to be an esh_hist_for_each_char callback)
  */
-bool esh_putc(struct esh * esh, char c);
+bool esh_putc(esh_t * esh, char c);
 
 /**
  * @internal
  * Print a string, using __memx on AVR.
  */
-bool esh_puts(struct esh * esh, char const AVR_ONLY(__memx) * s);
+bool esh_puts(esh_t * esh, char const AVR_ONLY(__memx) * s);
 
 /**
  * @internal
  * Print the prompt
  */
-void esh_print_prompt(struct esh * esh);
+void esh_print_prompt(esh_t * esh);
 
 /**
  * Overwrite the prompt and restore the buffer.
  * @param esh - esh instance
  */
-void esh_restore(struct esh * esh);
+void esh_restore(esh_t * esh);
 
 /**
  * Call the print callback. Wrapper to avoid ifdefs for static callback.
  */
-void esh_do_print_callback(struct esh * esh, char const * s);
+void esh_do_print_callback(esh_t * esh, char const * s);
 
 /**
  * Call the main callback. Wrapper to avoid ifdefs for static callback.
  */
-void esh_do_callback(struct esh * esh, int argc, char ** argv);
+void esh_do_callback(esh_t * esh, int argc, char ** argv);
 
 /**
  * Call the overflow callback. Wrapper to avoid ifdefs for the static
  * callback.
  */
-void esh_do_overflow_callback(struct esh * esh, char const * buffer);
+void esh_do_overflow_callback(esh_t * esh, char const * buffer);
 
 
 #define ESC_CURSOR_RIGHT    "\33[1C"

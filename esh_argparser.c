@@ -41,7 +41,7 @@
  * This is safe to use when the destination and source buffer are the same;
  * it will only ever contract the data, not expand it.
  */
-static void consume_quoted(struct esh * esh, size_t *src_i, size_t *dest_i)
+static void consume_quoted(esh_t * esh, size_t *src_i, size_t *dest_i)
 {
     char quote = esh->buffer[*src_i];
 
@@ -58,7 +58,7 @@ static void consume_quoted(struct esh * esh, size_t *src_i, size_t *dest_i)
 }
 
 
-int esh_parse_args(struct esh * esh)
+int esh_parse_args(esh_t * esh)
 {
     int argc = 0;
     bool last_was_space = true;

@@ -5,14 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-void esh_print_cb(struct esh * esh, char const * s);
-void esh_callback_cb(struct esh * esh, int argc, char ** argv);
+void esh_print_cb(esh_t * esh, char const * s);
+void esh_callback_cb(esh_t * esh, int argc, char ** argv);
 static void set_terminal_raw(void);
 static void restore_terminal(void);
 
 static struct termios saved_term;
 
-void esh_print_cb(struct esh * esh, char const * s)
+void esh_print_cb(esh_t * esh, char const * s)
 {
     (void) esh;
     for (size_t i = 0; s[i]; ++i) {
@@ -24,7 +24,7 @@ void esh_print_cb(struct esh * esh, char const * s)
 }
 
 
-void esh_callback_cb(struct esh * esh, int argc, char ** argv)
+void esh_callback_cb(esh_t * esh, int argc, char ** argv)
 {
     (void) esh;
 
@@ -45,7 +45,7 @@ int main(int argc, char ** argv)
     (void) argc;
     (void) argv;
 
-    struct esh esh;
+    esh_t esh;
 
     esh_init(&esh);
     esh_register_callback(&esh, esh_callback_cb);

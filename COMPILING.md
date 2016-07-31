@@ -12,29 +12,29 @@ should define the following:
     #define ESH_ARGC_MAX    10          // Maximum argument count
 
 
-Then, to use esh, include esh.h, define a "struct esh" for each esh instance you
+Then, to use esh, include esh.h, define a `esh_t` for each esh instance you
 want, and make sure to call the following setup functions (fully documented in
 esh.h):
 
-    esh_init(struct esh * esh);
+    esh_init(esh_t * esh);
     esh_register_callback(
-        struct esh * esh,
-        void (*callback)(struct esh * esh, int argc, char ** argv));
+        esh_t * esh,
+        void (*callback)(esh_t * esh, int argc, char ** argv));
     esh_register_print(
-        struct esh * esh,
-        void (*print)(struct esh * esh, char const * s));
+        esh_t * esh,
+        void (*print)(esh_t * esh, char const * s));
 
 
 Optionally, you can call the following as well:
 
     esh_register_overflow_callback(
-        struct esh * esh,
-        int (*callback)(struct esh * esh, char const * buffer));
+        esh_t * esh,
+        int (*callback)(esh_t * esh, char const * buffer));
 
 
 Then, as characters are received from your serial interface, feed them in with:
 
-    esh_rx(struct esh * esh, char c);
+    esh_rx(esh_t * esh, char c);
 
 History (optional)
 ------------------
@@ -47,7 +47,7 @@ To enable the optional history feature, define the following in `esh_config.h`:
 If you chose `MANUAL` allocation, call `esh_set_histbuf()` once you have allocated
 the buffer:
 
-    esh_set_histbuf(struct esh * esh, char * buffer);
+    esh_set_histbuf(esh_t * esh, char * buffer);
 
 Manual allocation was created for one specific purpose - history buffer in
 external SRAM on AVR (the compiler and malloc don't generally know about

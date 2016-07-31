@@ -35,83 +35,83 @@ enum esh_flags {
     IN_BRACKET_ESCAPE = 0x02,
 };
 
-static int internal_overflow(struct esh * esh, char const * buffer);
-static void execute_command(struct esh * esh);
-static void handle_char(struct esh * esh, char c);
-static void handle_esc(struct esh * esh, char esc);
-static void handle_ctrl(struct esh * esh, char c);
-static void ins_del(struct esh * esh, char c);
-static void term_cursor_move(struct esh * esh, int n);
-static void cursor_move(struct esh * esh, int n);
+static int internal_overflow(esh_t * esh, char const * buffer);
+static void execute_command(esh_t * esh);
+static void handle_char(esh_t * esh, char c);
+static void handle_esc(esh_t * esh, char esc);
+static void handle_ctrl(esh_t * esh, char c);
+static void ins_del(esh_t * esh, char c);
+static void term_cursor_move(esh_t * esh, int n);
+static void cursor_move(esh_t * esh, int n);
 
 #ifdef ESH_STATIC_CALLBACKS
-void ESH_PRINT_CALLBACK(struct esh * esh, char const * s);
-void ESH_CALLBACK(struct esh * esh, int argc, char ** argv);
+void ESH_PRINT_CALLBACK(esh_t * esh, char const * s);
+void ESH_CALLBACK(esh_t * esh, int argc, char ** argv);
 
-void __attribute__((weak)) ESH_OVERFLOW_CALLBACK(struct esh * esh,
+void __attribute__((weak)) ESH_OVERFLOW_CALLBACK(esh_t * esh,
         char const * buffer)
 {
     internal_overflow(esh, buffer);
 }
 
 
-void esh_do_print_callback(struct esh * esh, char const * s)
+void esh_do_print_callback(esh_t * esh, char const * s)
 {
     ESH_PRINT_CALLBACK(esh, s);
 }
 
 
-void esh_do_callback(struct esh * esh, int argc, char ** argv)
+void esh_do_callback(esh_t * esh, int argc, char ** argv)
 {
     ESH_CALLBACK(esh, argc, argv);
 }
 
 
-void esh_do_overflow_callback(struct esh * esh, char const * buffer)
+void esh_do_overflow_callback(esh_t * esh, char const * buffer)
 {
     ESH_OVERFLOW_CALLBACK(esh, buffer);
 }
 
 #else // ESH_STATIC_CALLBACKS
 
-void esh_do_print_callback(struct esh * esh, char const * s)
+void esh_do_print_callback(esh_t * esh, char const * s)
 {
     esh->print(esh, s);
 }
 
 
-void esh_do_callback(struct esh * esh, int argc, char ** argv)
+void esh_do_callback(esh_t * esh, int argc, char ** argv)
 {
     esh->callback(esh, argc, argv);
 }
 
 
-void esh_do_overflow_callback(struct esh * esh, char const * buffer)
+void esh_do_overflow_callback(esh_t * esh, char const * buffer)
 {
     esh->overflow(esh, buffer);
 }
 
 
-void esh_register_callback(struct esh * esh, esh_callback callback)
+void esh_register_callback(esh_t * esh, esh_callback callback)
 {
     esh->callback = callback;
 }
 
 
-void esh_register_print(struct esh * esh, esh_print print)
+void esh_register_print(esh_t * esh, esh_print print)
 {
     esh->print = print;
 }
 
 
-void esh_register_overflow_callback(struct esh * esh, esh_overflow overflow)
+void esh_register_overflow_callback(esh_t * esh, esh_overflow overflow)
 {
     esh->overflow = (overflow ? overflow : &internal_overflow);
 }
 
 #endif // ESH_STATIC_CALLBACKS
 
-bool esh_init(struct esh * esh)
+bool esh_init(esh_t * esh)
 {
     memset(esh, 0, sizeof(*esh));
 #ifndef ESH_STATIC_CALLBACKS
@@ -122,7 +122,7 @@ bool esh_init(struct esh * esh)
 }
 
 
-void esh_rx(struct esh * esh, char c)
+void esh_rx(esh_t * esh, char c)
 {
     if (esh->flags & IN_BRACKET_ESCAPE) {
         if (isalpha(c)) {
@@ -145,7 +145,7 @@ void esh_rx(struct esh * esh, char c)
 }
 
 
-static void handle_ctrl(struct esh * esh, char c)
+static void handle_ctrl(esh_t * esh, char c)
 {
     switch (c) {
         case 27: // escape
@@ -173,7 +173,7 @@ static void handle_ctrl(struct esh * esh, char c)
 }
 
 
-static void handle_esc(struct esh * esh, char esc)
+static void handle_esc(esh_t * esh, char esc)
 {
     int cdelta;
 
@@ -218,7 +218,7 @@ cmove: // micro-optimization, yo!
 }
 
 
-static void execute_command(struct esh * esh)
+static void execute_command(esh_t * esh)
 {
     esh_hist_substitute(esh);
     esh_putc(esh, '\n');
@@ -251,7 +251,7 @@ static void execute_command(struct esh * esh)
 }
 
 
-static void handle_char(struct esh * esh, char c)
+static void handle_char(esh_t * esh, char c)
 {
     esh_hist_substitute(esh);
 
@@ -266,13 +266,13 @@ static void handle_char(struct esh * esh, char c)
 }
 
 
-void esh_print_prompt(struct esh * esh)
+void esh_print_prompt(esh_t * esh)
 {
     esh_puts(esh, FSTR(ESH_PROMPT));
 }
 
 
-static int internal_overflow(struct esh * esh, char const * buffer)
+static int internal_overflow(esh_t * esh, char const * buffer)
 {
     (void) buffer;
     esh_puts(esh, FSTR("\n\nesh: command buffer overflow\n"));
@@ -280,7 +280,7 @@ static int internal_overflow(struct esh * esh, char const * buffer)
 }
 
 
-bool esh_putc(struct esh * esh, char c)
+bool esh_putc(esh_t * esh, char c)
 {
     char c_as_string[] = {c, 0};
     esh_do_print_callback(esh, c_as_string);
@@ -288,7 +288,7 @@ bool esh_putc(struct esh * esh, char c)
 }
 
 
-bool esh_puts(struct esh * esh, char const AVR_ONLY(__memx) * s)
+bool esh_puts(esh_t * esh, char const AVR_ONLY(__memx) * s)
 {
     for (size_t i = 0; s[i]; ++i) {
         esh_putc(esh, s[i]);
@@ -297,7 +297,7 @@ bool esh_puts(struct esh * esh, char const AVR_ONLY(__memx) * s)
 }
 
 
-void esh_restore(struct esh * esh)
+void esh_restore(esh_t * esh)
 {
     esh_puts(esh, FSTR(ESC_ERASE_LINE "\r")); // Clear line
     esh_print_prompt(esh);
@@ -312,7 +312,7 @@ void esh_restore(struct esh * esh)
 /**
  * Move only the terminal cursor. This does not move the insertion point.
  */
-static void term_cursor_move(struct esh * esh, int n)
+static void term_cursor_move(esh_t * esh, int n)
 {
     for ( ; n > 0; --n) {
         esh_puts(esh, FSTR(ESC_CURSOR_RIGHT));
@@ -328,7 +328,7 @@ static void term_cursor_move(struct esh * esh, int n)
  * Move the esh cursor. This applies history substitution, moves the terminal
  * cursor, and moves the insertion point.
  */
-static void cursor_move(struct esh * esh, int n)
+static void cursor_move(esh_t * esh, int n)
 {
     esh_hist_substitute(esh);
     if ((int) esh->ins + n < 0) {
@@ -347,7 +347,7 @@ static void cursor_move(struct esh * esh, int n)
  * @param esh - esh instance
  * @param c - character to insert, or 0 to delete
  */
-static void ins_del(struct esh * esh, char c)
+static void ins_del(esh_t * esh, char c)
 {
     int sgn = c ? 1 : -1;
     bool move = (esh->ins != esh->cnt);

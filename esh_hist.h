@@ -38,6 +38,7 @@
  */
 
 struct esh;
+typedef struct esh esh_t;
 
 #ifdef ESH_HIST_ALLOC
 // Begin actual history implementation
@@ -54,7 +55,7 @@ struct esh_hist {
  * @return true on error. Can only return error if the history buffer is to be
  * allocated on heap.
  */
-bool esh_hist_init(struct esh * esh);
+bool esh_hist_init(esh_t * esh);
 
 /**
  * Count back n strings from the current tail of the ring buffer and return the
@@ -65,7 +66,7 @@ bool esh_hist_init(struct esh * esh);
  * @return offset in the ring buffer where the nth string starts, or -1 if
  *  there are not n-1 strings in the buffer.
  */
-int esh_hist_nth(struct esh * esh, int n);
+int esh_hist_nth(esh_t * esh, int n);
 
 /**
  * Add a string into the buffer. If the string doesn't fit, the buffer is
@@ -74,14 +75,14 @@ int esh_hist_nth(struct esh * esh, int n);
  * @param s - string to add
  * @return true iff the string didn't fit (this is destructive!)
  */
-bool esh_hist_add(struct esh * esh, char const * s);
+bool esh_hist_add(esh_t * esh, char const * s);
 
 /**
  * Overwrite the prompt and print a history suggestion.
  * @param esh - esh instance
  * @param offset - offset into the ring buffer
  */
-void esh_hist_print(struct esh * esh, int offset);
+void esh_hist_print(esh_t * esh, int offset);
 
 /**
  * If history is currently being browsed, substitute the selected history item
@@ -89,63 +90,63 @@ void esh_hist_print(struct esh * esh, int offset);
  * @param esh - esh instance
  * @return true iff the substitution was made (i.e. history was being browsed)
  */
-bool esh_hist_substitute(struct esh * esh);
+bool esh_hist_substitute(esh_t * esh);
 
 #else // ESH_HIST_ALLOC
 // Begin placeholder implementation
 
-struct esh_hist {
+esh_t_hist {
     size_t idx;
 };
 
 #define INL static inline __attribute__((always_inline))
 
-INL bool esh_hist_init(struct esh * esh)
+INL bool esh_hist_init(esh_t * esh)
 {
     (void) esh;
     return false;
 }
 
-INL int esh_hist_nth(struct esh * esh, int n)
+INL int esh_hist_nth(esh_t * esh, int n)
 {
     (void) esh;
     (void) n;
     return -1;
 }
 
-INL bool esh_hist_add(struct esh * esh, char const * s)
+INL bool esh_hist_add(esh_t * esh, char const * s)
 {
     (void) esh;
     (void) s;
     return true;
 }
 
-INL void esh_hist_for_each_char( struct esh * esh, int offset,
-        bool (*callback)(struct esh * esh, char c))
+INL void esh_hist_for_each_char( esh_t * esh, int offset,
+        bool (*callback)(esh_t * esh, char c))
 {
     (void) esh;
     (void) offset;
     (void) callback;
 }
 
-INL void esh_hist_print(struct esh * esh, int offset)
+INL void esh_hist_print(esh_t * esh, int offset)
 {
     (void) esh;
     (void) offset;
 }
 
-INL void esh_hist_restore(struct esh * esh)
+INL void esh_hist_restore(esh_t * esh)
 {
     (void) esh;
 }
 
-INL void esh_hist_clobber(struct esh * esh, int offset)
+INL void esh_hist_clobber(esh_t * esh, int offset)
 {
     (void) esh;
     (void) offset;
 }
 
-INL bool esh_hist_substitute(struct esh * esh)
+INL bool esh_hist_substitute(esh_t * esh)
 {
     (void) esh;
     return false;
