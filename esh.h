@@ -56,6 +56,19 @@ typedef void (*esh_print)(struct esh * esh, char const * s);
  * @return TODO document this
  */
 typedef int (*esh_overflow)(struct esh * esh, char const * buffer);
+
+#ifdef ESH_ENVVARS
+/**
+ * Callback to fetch an environment variable.
+ * @param esh - the esh instance calling
+ * @param var - the environment variable requested
+ * @param buffer - buffer to copy the value into
+ * @param buflen - available buffer length
+ * @return 0 on success, -1 if buffer length is exceeded.
+ */
+typedef int (*esh_var_callback)(struct esh * esh, char const * var, char * buffer, size_t buflen);
+#endif // ESH_ENVVARS
+
 #endif // ESH_STATIC_CALLBACKS
 
 /**
@@ -69,7 +82,13 @@ struct esh {
     size_t ins;
     uint_fast8_t flags;
     struct esh_hist hist;
+#ifdef ESH_ENVVARS
+    char argbuffer[ESH_BUFFER_LEN + 1];
+#endif
 #ifndef ESH_STATIC_CALLBACKS
+#   ifdef ESH_ENVVARS
+    esh_var_callback var_callback;
+#   endif
     esh_callback callback;
     esh_print print;
     esh_overflow overflow;

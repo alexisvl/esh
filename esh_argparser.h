@@ -62,6 +62,8 @@
  * after:  git config user.name NAME#
  * second: git#config#user.name#My Name#
  * argv:   ^   ^      ^         ^
+ *
+ * When the arguments cannot be parsed, return -1.
  */
 int esh_parse_args(struct esh * esh);
 
