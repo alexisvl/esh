@@ -1,7 +1,7 @@
 .PHONY: all clean
 
-CFLAGS = -Wall -Wextra -Werror -pedantic -std=c11 -Og -ggdb -I .. -iquote . 
-OBJECTS = main.o ../esh.o ../esh_hist.o
+CFLAGS = -Wall -Wextra -Werror -pedantic -std=c11 -Og -ggdb -I .. -iquote .
+OBJECTS = main.o ../esh.o ../esh_hist.o ../esh_argparser.o
 OUTPUT = demo
 
 all: ${OUTPUT}

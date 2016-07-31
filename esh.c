@@ -27,6 +27,8 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#define ESH_INTERNAL_INCLUDE
+#include <esh_argparser.h>
 
 enum esh_flags {
     IN_ESCAPE = 0x01,
@@ -38,7 +40,6 @@ static void execute_command(struct esh * esh);
 static void handle_char(struct esh * esh, char c);
 static void handle_esc(struct esh * esh, char esc);
 static void handle_ctrl(struct esh * esh, char c);
-static int make_arg_array(struct esh * esh);
 static void ins_del(struct esh * esh, char c);
 static void term_cursor_move(struct esh * esh, int n);
 static void cursor_move(struct esh * esh, int n);
@@ -237,7 +238,7 @@ static void execute_command(struct esh * esh)
         esh_hist_add(esh, esh->buffer);
     }
 
-    int argc = make_arg_array(esh);
+    int argc = esh_parse_args(esh);
 
     if (argc > ESH_ARGC_MAX) {
         esh_do_overflow_callback(esh, esh->buffer);
@@ -276,71 +277,6 @@ static int internal_overflow(struct esh * esh, char const * buffer)
     (void) buffer;
     esh_puts(esh, FSTR("\n\nesh: command buffer overflow\n"));
     return 0;
-}
-
-
-/**
- * Map the buffer to the argv array, and return argc. If argc exceeds the
- * maximum, the full buffer will still be processed; argument pointers will
- * just not be stored beyond the maximum. The number that would have been
- * stored is returned.
- *
- * Handles whitespace and quotes. Following is the buffer before and after
- * processing (# for NUL), with pointers stored in argv[] marked with ^
- *
- *
- * before: git   config user.name "My Name"
- * after:  git###config#user.name#My Name#
- * argv:   ^     ^      ^         ^
- *
- * Rearranging the buffer is necessary because quotes can occur in the
- * middle of arguments. For example:
- *
- * before: why" would you ever"'"'"do this??"
- * after:  why would you ever"do this??#
- * argv:   ^
- */
-static int make_arg_array(struct esh * esh)
-{
-    int argc = 0;
-    bool last_was_space = true;
-    size_t dest = 0;
-    char quote = 0;
-
-    for (size_t i = 0; i < esh->cnt; ++i) {
-        if (quote) {
-            if (esh->buffer[i] == quote) {
-                quote = 0;
-            } else {
-                esh->buffer[dest] = esh->buffer[i];
-                ++dest;
-            }
-            last_was_space = false;
-        } else {
-            if (isspace(esh->buffer[i])) {
-                last_was_space = true;
-                esh->buffer[dest] = 0;
-                ++dest;
-            } else {
-                if (last_was_space) {
-                    if (argc < ESH_ARGC_MAX) {
-                        esh->argv[argc] = &esh->buffer[i];
-                    }
-                    ++argc;
-                }
-                if (esh->buffer[i] == '\'' || esh->buffer[i] == '\"') {
-                    quote = esh->buffer[i];
-                } else {
-                    esh->buffer[dest] = esh->buffer[i];
-                    ++dest;
-                }
-                last_was_space = false;
-            }
-        }
-    }
-    esh->buffer[dest] = 0;
-    esh->buffer[ESH_BUFFER_LEN] = 0;
-    return argc;
 }
 
 

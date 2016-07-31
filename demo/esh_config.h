@@ -4,3 +4,5 @@
 
 #define ESH_HIST_ALLOC STATIC
 #define ESH_HIST_LEN 4096
+
+#define ESH_ENVVARS
