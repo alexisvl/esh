@@ -35,7 +35,7 @@ enum esh_flags {
     IN_BRACKET_ESCAPE = 0x02,
 };
 
-static int internal_overflow(esh_t * esh, char const * buffer);
+static void internal_overflow(esh_t * esh, char const * buffer);
 static void execute_command(esh_t * esh);
 static void handle_char(esh_t * esh, char c);
 static void handle_esc(esh_t * esh, char esc);
@@ -272,11 +272,10 @@ void esh_print_prompt(esh_t * esh)
 }
 
 
-static int internal_overflow(esh_t * esh, char const * buffer)
+static void internal_overflow(esh_t * esh, char const * buffer)
 {
     (void) buffer;
     esh_puts(esh, FSTR("\n\nesh: command buffer overflow\n"));
-    return 0;
 }
 
 

@@ -53,9 +53,8 @@ typedef void (*esh_print)(esh_t * esh, char const * s);
  * Callback to notify about overflow.
  * @param esh - the esh instance calling
  * @param buffer - the internal buffer, NUL-terminated
- * @return TODO document this
  */
-typedef int (*esh_overflow)(esh_t * esh, char const * buffer);
+typedef void (*esh_overflow)(esh_t * esh, char const * buffer);
 #endif // ESH_STATIC_CALLBACKS
 
 /**
