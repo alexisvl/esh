@@ -39,22 +39,25 @@ struct esh;
  * Callback to handle commands.
  * @param argc - number of arguments, including the command name
  * @param argv - arguments
+ * @param arg - arbitrary argument you passed to esh_register_command()
  */
-typedef void (*esh_cb_command)(esh_t * esh, int argc, char ** argv);
+typedef void (*esh_cb_command)(esh_t * esh, int argc, char ** argv, void * arg);
 
 /**
  * Callback to print a character.
  * @param esh - the esh instance calling
  * @param s - the string to print
+ * @param arg - arbitrary argument you passed to esh_register_print()
  */
-typedef void (*esh_print)(esh_t * esh, char const * s);
+typedef void (*esh_print)(esh_t * esh, char const * s, void * arg);
 
 /**
  * Callback to notify about overflow.
  * @param esh - the esh instance calling
  * @param buffer - the internal buffer, NUL-terminated
+ * @param arg - arbitrary argument you passed to esh_register_overflow()
  */
-typedef void (*esh_overflow)(esh_t * esh, char const * buffer);
+typedef void (*esh_overflow)(esh_t * esh, char const * buffer, void * arg);
 #endif // ESH_STATIC_CALLBACKS
 
 /**
@@ -72,33 +75,48 @@ typedef struct esh {
     esh_cb_command cb_command;
     esh_print print;
     esh_overflow overflow;
+    void *cb_command_arg;
+    void *cb_print_arg;
+    void *cb_overflow_arg;
 #endif
 } esh_t;
 
 /**
- * Initialize esh. Must be called before any other functions.
- * @param esh - esh instance
- * @return true on error. Can only return true when using malloc to allocate
- * history buffer; in all other cases you can ignore the return value.
+ * Return a pointer to an initialized esh object. Must be called before
+ * any other functions.
+ *
+ * See ESH_ALLOC in esh_config.h - this should be STATIC or MALLOC.
+ * If STATIC, ESH_INSTANCES must be defined to the maximum number of
+ * instances.
+ *
+ * @return esh instance, or NULL on failure. Failure can only happen in the
+ * following cases:
+ *  - using malloc to allocate either the esh struct itself or the history
+ *      buffer, and malloc returns NULL
+ *  - using static allocation and you tried to initialize more than
+ *      ESH_INSTANCES.
  */
-bool esh_init(esh_t * esh);
+esh_t * esh_init(void);
 
 #ifndef ESH_STATIC_CALLBACKS
 /**
  * Register a callback to execute a command.
+ * @param arg - arbitrary argument to pass to the callback
  */
-void esh_register_command(esh_t * esh, esh_cb_command callback);
+void esh_register_command(esh_t * esh, esh_cb_command callback, void * arg);
 
 /**
  * Register a callback to print a character.
+ * @param arg - arbitrary argument to pass to the callback
  */
-void esh_register_print(esh_t * esh, esh_print callback);
+void esh_register_print(esh_t * esh, esh_print callback, void * arg);
 
 /**
  * Register a callback to notify about overflow. Optional; esh has an internal
  * overflow handler. To reset to that, set the handler to NULL.
+ * @param arg - arbitrary argument to pass to the callback
  */
-void esh_register_overflow_callback(esh_t * esh, esh_overflow overflow);
+void esh_register_overflow_callback(esh_t * esh, esh_overflow overflow, void * arg);
 #endif
 
 /**

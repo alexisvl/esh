@@ -21,6 +21,10 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#define STATIC 1
+#define MANUAL 2
+#define MALLOC 3
+
 #define ESH_INTERNAL
 #include <esh.h>
 #include <string.h>
@@ -35,7 +39,7 @@ enum esh_flags {
     IN_BRACKET_ESCAPE = 0x02,
 };
 
-static void internal_overflow(esh_t * esh, char const * buffer);
+static void internal_overflow(esh_t * esh, char const * buffer, void * arg);
 static void execute_command(esh_t * esh);
 static void handle_char(esh_t * esh, char c);
 static void handle_esc(esh_t * esh, char esc);
@@ -45,80 +49,122 @@ static void term_cursor_move(esh_t * esh, int n);
 static void cursor_move(esh_t * esh, int n);
 
 #ifdef ESH_STATIC_CALLBACKS
-void ESH_PRINT_CALLBACK(esh_t * esh, char const * s);
-void ESH_COMMAND_CALLBACK(esh_t * esh, int argc, char ** argv);
+void ESH_PRINT_CALLBACK(esh_t * esh, char const * s, void * arg);
+void ESH_COMMAND_CALLBACK(esh_t * esh, int argc, char ** argv void * arg);
 
 void __attribute__((weak)) ESH_OVERFLOW_CALLBACK(esh_t * esh,
-        char const * buffer)
+        char const * buffer, void * arg)
 {
+    (void) arg;
     internal_overflow(esh, buffer);
 }
 
 
 void esh_do_print_callback(esh_t * esh, char const * s)
 {
-    ESH_PRINT_CALLBACK(esh, s);
+    ESH_PRINT_CALLBACK(esh, s, NULL);
 }
 
 
 void esh_do_command(esh_t * esh, int argc, char ** argv)
 {
-    ESH_COMMAND_CALLBACK(esh, argc, argv);
+    ESH_COMMAND_CALLBACK(esh, argc, argv, NULL);
 }
 
 
 void esh_do_overflow_callback(esh_t * esh, char const * buffer)
 {
-    ESH_OVERFLOW_CALLBACK(esh, buffer);
+    ESH_OVERFLOW_CALLBACK(esh, buffer, NULL);
 }
 
 #else // ESH_STATIC_CALLBACKS
 
 void esh_do_print_callback(esh_t * esh, char const * s)
 {
-    esh->print(esh, s);
+    esh->print(esh, s, esh->cb_print_arg);
 }
 
 
 void esh_do_command(esh_t * esh, int argc, char ** argv)
 {
-    esh->cb_command(esh, argc, argv);
+    esh->cb_command(esh, argc, argv, esh->cb_command_arg);
 }
 
 
 void esh_do_overflow_callback(esh_t * esh, char const * buffer)
 {
-    esh->overflow(esh, buffer);
+    esh->overflow(esh, buffer, esh->cb_overflow_arg);
 }
 
 
-void esh_register_command(esh_t * esh, esh_cb_command callback)
+void esh_register_command(esh_t * esh, esh_cb_command callback, void * arg)
 {
     esh->cb_command = callback;
+    esh->cb_command_arg = arg;
 }
 
 
-void esh_register_print(esh_t * esh, esh_print callback)
+void esh_register_print(esh_t * esh, esh_print callback, void * arg)
 {
     esh->print = callback;
+    esh->cb_print_arg = arg;
 }
 
 
-void esh_register_overflow_callback(esh_t * esh, esh_overflow overflow)
+void esh_register_overflow_callback(esh_t * esh, esh_overflow overflow, void * arg)
 {
     esh->overflow = (overflow ? overflow : &internal_overflow);
+    esh->cb_overflow_arg = arg;
 }
 
 #endif // ESH_STATIC_CALLBACKS
 
-bool esh_init(esh_t * esh)
+#if ESH_ALLOC == STATIC
+static size_t n_allocated = 0;
+static esh_t * esh_alloc(void)
 {
+    static esh_t instances[ESH_INSTANCES];
+
+    if (n_allocated < ESH_INSTANCES) {
+        esh_t * esh = &instances[n_allocated];
+        ++n_allocated;
+        return esh;
+    } else {
+        return NULL;
+    }
+}
+static void esh_free_last(esh_t * esh)
+{
+    (void) esh;
+}
+#elif ESH_ALLOC == MALLOC
+static esh_t * esh_alloc(void)
+{
+    return malloc(sizeof(esh_t));
+}
+static void esh_free_last(esh_t * esh)
+{
+    free(esh);
+}
+#else
+#   error "ESH_ALLOC must be STATIC or MALLOC"
+#endif
+
+esh_t * esh_init(void)
+{
+    esh_t * esh = esh_alloc();
+
     memset(esh, 0, sizeof(*esh));
 #ifndef ESH_STATIC_CALLBACKS
     esh->overflow = internal_overflow;
 #endif
 
-    return esh_hist_init(esh);
+    if (esh_hist_init(esh)) {
+        esh_free_last(esh);
+        return NULL;
+    } else {
+        return esh;
+    }
 }
 
 
@@ -272,9 +318,10 @@ void esh_print_prompt(esh_t * esh)
 }
 
 
-static void internal_overflow(esh_t * esh, char const * buffer)
+static void internal_overflow(esh_t * esh, char const * buffer, void * arg)
 {
     (void) buffer;
+    (void) arg;
     esh_puts(esh, FSTR("\n\nesh: command buffer overflow\n"));
 }
 

@@ -1,0 +1,15 @@
+[package]
+name = "esh_demo"
+version = "0.1.0"
+authors = ["Chris Pavlina <pavlina.chris@gmail.com>"]
+build = "build.rs"
+
+[dependencies]
+termios = "0.2.2"
+sig = "0.1.1"
+
+[dependencies.esh]
+path = "../esh_rust"
+
+[build-dependencies]
+gcc = "0.3"
