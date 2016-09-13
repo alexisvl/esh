@@ -98,3 +98,7 @@ integrated directly into your project.
 esh should compile quietly with most warning settings, including
 `-Wall -Wextra -pedantic`.
 
+When compiling for Rust, the same applies, as the C library must first be
+built, and linked in. Then link in the `esh` crate as usual. The Cargo
+script for the demo build (`demo_rust/Cargo.toml` and `demo_rust/build.rs`)
+demonstrates how to do this.

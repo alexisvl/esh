@@ -1,8 +1,9 @@
 esh - embedded shell
 ====================
 
-esh is a lightweight command shell for embedded applications, small enough to
-be used for (and intended for) debug UART consoles on microcontrollers.
+esh is a lightweight command shell for embedded applications in C or Rust,
+small enough to be used for (and intended for) debug UART consoles on
+microcontrollers.
 
 This readme describes esh and how to try it out. If you think you'd like to
 use it, see the [compiling guide](COMPILING.md) for information on how to set
@@ -15,6 +16,9 @@ There is a simple demo in the `demo` subdirectory, which can be compiled and
 run on a unix-like system by moving into that directory and issuing the `make`
 command. There are no dependencies other than libc and a compiler. Once built,
 execute `./demo` and try it out!
+
+The Rust demo is in `demo_rust`, and can be compiled and run on a unix-like
+system by moving into that directory and issuing `cargo build` and `cargo run`.
 
 Features
 ========
