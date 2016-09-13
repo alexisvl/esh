@@ -1,4 +1,5 @@
 /* esh - embedded shell
+ * Rust bindings
  *
  * Copyright (c) 2016, Chris Pavlina.
  *
