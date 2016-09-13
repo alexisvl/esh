@@ -46,7 +46,7 @@ static void cursor_move(esh_t * esh, int n);
 
 #ifdef ESH_STATIC_CALLBACKS
 void ESH_PRINT_CALLBACK(esh_t * esh, char const * s);
-void ESH_CALLBACK(esh_t * esh, int argc, char ** argv);
+void ESH_COMMAND_CALLBACK(esh_t * esh, int argc, char ** argv);
 
 void __attribute__((weak)) ESH_OVERFLOW_CALLBACK(esh_t * esh,
         char const * buffer)
@@ -61,9 +61,9 @@ void esh_do_print_callback(esh_t * esh, char const * s)
 }
 
 
-void esh_do_callback(esh_t * esh, int argc, char ** argv)
+void esh_do_command(esh_t * esh, int argc, char ** argv)
 {
-    ESH_CALLBACK(esh, argc, argv);
+    ESH_COMMAND_CALLBACK(esh, argc, argv);
 }
 
 
@@ -80,9 +80,9 @@ void esh_do_print_callback(esh_t * esh, char const * s)
 }
 
 
-void esh_do_callback(esh_t * esh, int argc, char ** argv)
+void esh_do_command(esh_t * esh, int argc, char ** argv)
 {
-    esh->callback(esh, argc, argv);
+    esh->cb_command(esh, argc, argv);
 }
 
 
@@ -92,15 +92,15 @@ void esh_do_overflow_callback(esh_t * esh, char const * buffer)
 }
 
 
-void esh_register_callback(esh_t * esh, esh_callback callback)
+void esh_register_command(esh_t * esh, esh_cb_command callback)
 {
-    esh->callback = callback;
+    esh->cb_command = callback;
 }
 
 
-void esh_register_print(esh_t * esh, esh_print print)
+void esh_register_print(esh_t * esh, esh_print callback)
 {
-    esh->print = print;
+    esh->print = callback;
 }
 
 
@@ -243,7 +243,7 @@ static void execute_command(esh_t * esh)
     if (argc > ESH_ARGC_MAX) {
         esh_do_overflow_callback(esh, esh->buffer);
     } else if (argc > 0) {
-        esh_do_callback(esh, argc, esh->argv);
+        esh_do_command(esh, argc, esh->argv);
     }
 
     esh->cnt = esh->ins = 0;

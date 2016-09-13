@@ -17,19 +17,19 @@ want, and make sure to call the following setup functions (fully documented in
 esh.h):
 
     esh_init(esh_t * esh);
-    esh_register_callback(
+    esh_register_command(
         esh_t * esh,
         void (*callback)(esh_t * esh, int argc, char ** argv));
     esh_register_print(
         esh_t * esh,
-        void (*print)(esh_t * esh, char const * s));
+        void (*callback)(esh_t * esh, char const * s));
 
 
 Optionally, you can call the following as well:
 
     esh_register_overflow_callback(
         esh_t * esh,
-        int (*callback)(esh_t * esh, char const * buffer));
+        void (*callback)(esh_t * esh, char const * buffer));
 
 
 Then, as characters are received from your serial interface, feed them in with:
@@ -68,8 +68,8 @@ your `esh_config.h`:
 
     #define ESH_STATIC_CALLBACKS
 
-Now, simply name your callbacks `ESH_PRINT_CALLBACK`, `ESH_CALLBACK`, and
-`ESH_OVERFLOW_CALLBACK` (the overflow callback is still optional), and the
+Now, simply name your callbacks `ESH_PRINT_CALLBACK`, `ESH_COMMAND_CALLBACK`,
+and `ESH_OVERFLOW_CALLBACK` (the overflow callback is still optional), and the
 linker will find them.
 
 Note about line endings

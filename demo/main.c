@@ -6,7 +6,7 @@
 #include <string.h>
 
 void esh_print_cb(esh_t * esh, char const * s);
-void esh_callback_cb(esh_t * esh, int argc, char ** argv);
+void esh_command_cb(esh_t * esh, int argc, char ** argv);
 static void set_terminal_raw(void);
 static void restore_terminal(void);
 
@@ -24,7 +24,7 @@ void esh_print_cb(esh_t * esh, char const * s)
 }
 
 
-void esh_callback_cb(esh_t * esh, int argc, char ** argv)
+void esh_command_cb(esh_t * esh, int argc, char ** argv)
 {
     (void) esh;
 
@@ -48,7 +48,7 @@ int main(int argc, char ** argv)
     esh_t esh;
 
     esh_init(&esh);
-    esh_register_callback(&esh, esh_callback_cb);
+    esh_register_command(&esh, esh_command_cb);
     esh_register_print(&esh, esh_print_cb);
 
     if (!isatty(STDIN_FILENO)) {

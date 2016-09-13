@@ -40,7 +40,7 @@ struct esh;
  * @param argc - number of arguments, including the command name
  * @param argv - arguments
  */
-typedef void (*esh_callback)(esh_t * esh, int argc, char ** argv);
+typedef void (*esh_cb_command)(esh_t * esh, int argc, char ** argv);
 
 /**
  * Callback to print a character.
@@ -69,7 +69,7 @@ typedef struct esh {
     uint_fast8_t flags;
     struct esh_hist hist;
 #ifndef ESH_STATIC_CALLBACKS
-    esh_callback callback;
+    esh_cb_command cb_command;
     esh_print print;
     esh_overflow overflow;
 #endif
@@ -87,12 +87,12 @@ bool esh_init(esh_t * esh);
 /**
  * Register a callback to execute a command.
  */
-void esh_register_callback(esh_t * esh, esh_callback callback);
+void esh_register_command(esh_t * esh, esh_cb_command callback);
 
 /**
  * Register a callback to print a character.
  */
-void esh_register_print(esh_t * esh, esh_print print);
+void esh_register_print(esh_t * esh, esh_print callback);
 
 /**
  * Register a callback to notify about overflow. Optional; esh has an internal
