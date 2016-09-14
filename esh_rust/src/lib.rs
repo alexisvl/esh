@@ -22,10 +22,11 @@
  * OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-use std::ptr;
-use std::mem;
-use std::slice;
-use std::ops::Index;
+#![no_std]
+use core::ptr;
+use core::mem;
+use core::slice;
+use core::ops::Index;
 
 /// The main esh object. This is an opaque object representing an esh instance,
 /// and having methods for interacting with it.
