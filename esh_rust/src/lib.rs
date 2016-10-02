@@ -23,6 +23,7 @@
  */
 
 #![no_std]
+#![crate_name = "esh"]
 use core::ptr;
 use core::mem;
 use core::slice;
