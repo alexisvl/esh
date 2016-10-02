@@ -27,6 +27,7 @@
 #include <esh.h>
 #define ESH_INTERNAL_INCLUDE
 #include <esh_argparser.h>
+#include <esh_internal.h>
 
 #define DEST(esh) ((esh)->buffer)
 

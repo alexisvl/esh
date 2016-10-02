@@ -26,8 +26,9 @@
 #define MANUAL 2
 #define MALLOC 3
 
-#define ESH_INTERNAL
 #include <esh.h>
+#define ESH_INTERNAL_INCLUDE
+#include <esh_internal.h>
 #include <stdlib.h>
 #include <string.h>
 

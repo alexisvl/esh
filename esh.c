@@ -25,7 +25,6 @@
 #define MANUAL 2
 #define MALLOC 3
 
-#define ESH_INTERNAL
 #include <esh.h>
 #include <string.h>
 #include <ctype.h>
@@ -33,6 +32,7 @@
 #include <stdlib.h>
 #define ESH_INTERNAL_INCLUDE
 #include <esh_argparser.h>
+#include <esh_internal.h>
 
 enum esh_flags {
     IN_ESCAPE = 0x01,
