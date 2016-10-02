@@ -348,8 +348,6 @@ void esh_restore(esh_t * esh)
     esh_print_prompt(esh);
     esh->buffer[esh->cnt] = 0;
     esh_puts(esh, esh->buffer);
-    // Move cursor back again to the insertion point. Easier to loop than to
-    // printf the number into the esc sequence...
     term_cursor_move(esh, -(int)(esh->cnt - esh->ins));
 }
 
