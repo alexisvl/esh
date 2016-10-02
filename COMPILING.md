@@ -10,26 +10,30 @@ should define the following:
     #define ESH_PROMPT      "% "        // Prompt string
     #define ESH_BUFFER_LEN  200         // Maximum length of a command
     #define ESH_ARGC_MAX    10          // Maximum argument count
-
+    #define ESH_ALLOC       STATIC      // How to allocate esh_t (or MALLOC)
+    #define ESH_INSTANCES   1           // Number of instances, if ^ STATIC
 
 Then, to use esh, include esh.h, define a `esh_t` for each esh instance you
 want, and make sure to call the following setup functions (fully documented in
 esh.h):
 
-    esh_init(esh_t * esh);
+    esh_t * esh = esh_init();
     esh_register_command(
         esh_t * esh,
-        void (*callback)(esh_t * esh, int argc, char ** argv));
+        void (*callback)(esh_t * esh, int argc, char ** argv, void * arg),
+        void * arg);
     esh_register_print(
         esh_t * esh,
-        void (*callback)(esh_t * esh, char const * s));
+        void (*callback)(esh_t * esh, char const * s, void * arg),
+        void * arg);
 
 
 Optionally, you can call the following as well:
 
     esh_register_overflow_callback(
         esh_t * esh,
-        void (*callback)(esh_t * esh, char const * buffer));
+        void (*callback)(esh_t * esh, char const * buffer, void * arg),
+        void * arg);
 
 
 Then, as characters are received from your serial interface, feed them in with:
