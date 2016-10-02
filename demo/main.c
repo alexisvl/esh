@@ -5,16 +5,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-void esh_print_cb(esh_t * esh, char const * s);
-void esh_command_cb(esh_t * esh, int argc, char ** argv);
+void esh_print_cb(esh_t * esh, char const * s, void * arg);
+void esh_command_cb(esh_t * esh, int argc, char ** argv, void * arg);
 static void set_terminal_raw(void);
 static void restore_terminal(void);
 
 static struct termios saved_term;
 
-void esh_print_cb(esh_t * esh, char const * s)
+void esh_print_cb(esh_t * esh, char const * s, void * arg)
 {
     (void) esh;
+    (void) arg;
     for (size_t i = 0; s[i]; ++i) {
         if (s[i] == '\n') {
             fputc('\r', stdout);
@@ -24,9 +25,10 @@ void esh_print_cb(esh_t * esh, char const * s)
 }
 
 
-void esh_command_cb(esh_t * esh, int argc, char ** argv)
+void esh_command_cb(esh_t * esh, int argc, char ** argv, void * arg)
 {
     (void) esh;
+    (void) arg;
 
     if (argc && (!strcmp(argv[0], "exit") || !strcmp(argv[0], "quit"))) {
         exit(0);
@@ -45,11 +47,9 @@ int main(int argc, char ** argv)
     (void) argc;
     (void) argv;
 
-    esh_t esh;
-
-    esh_init(&esh);
-    esh_register_command(&esh, esh_command_cb);
-    esh_register_print(&esh, esh_print_cb);
+    esh_t *esh = esh_init();
+    esh_register_command(esh, esh_command_cb, NULL);
+    esh_register_print(esh, esh_print_cb, NULL);
 
     if (!isatty(STDIN_FILENO)) {
         fprintf(stderr, "%s\n", "esh demo must run on a tty");
@@ -68,14 +68,14 @@ int main(int argc, char ** argv)
     set_terminal_raw();
 
     printf("%s\r\n", "Use 'quit' or 'exit' to quit.");
-    esh_rx(&esh, '\n');
+    esh_rx(esh, '\n');
     for (;;) {
         int c = getchar();
         if (c > 0 && c <= 255) {
             if (c == '\r') {
                 c = '\n';
             }
-            esh_rx(&esh, c);
+            esh_rx(esh, c);
         }
     }
 
