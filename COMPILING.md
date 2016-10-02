@@ -24,7 +24,7 @@ esh.h):
         void * arg);
     esh_register_print(
         esh_t * esh,
-        void (*callback)(esh_t * esh, char const * s, void * arg),
+        void (*callback)(esh_t * esh, char c, void * arg),
         void * arg);
 
 

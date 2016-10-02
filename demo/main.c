@@ -5,23 +5,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-void esh_print_cb(esh_t * esh, char const * s, void * arg);
+void esh_print_cb(esh_t * esh, char c, void * arg);
 void esh_command_cb(esh_t * esh, int argc, char ** argv, void * arg);
 static void set_terminal_raw(void);
 static void restore_terminal(void);
 
 static struct termios saved_term;
 
-void esh_print_cb(esh_t * esh, char const * s, void * arg)
+void esh_print_cb(esh_t * esh, char c, void * arg)
 {
     (void) esh;
     (void) arg;
-    for (size_t i = 0; s[i]; ++i) {
-        if (s[i] == '\n') {
-            fputc('\r', stdout);
-        }
-        fputc(s[i], stdout);
+    if (c == '\n') {
+        fputc('\r', stdout);
     }
+    fputc(c, stdout);
 }
 
 

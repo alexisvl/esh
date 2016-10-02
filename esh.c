@@ -60,9 +60,9 @@ void __attribute__((weak)) ESH_OVERFLOW_CALLBACK(esh_t * esh,
 }
 
 
-void esh_do_print_callback(esh_t * esh, char const * s)
+void esh_do_print_callback(esh_t * esh, char c)
 {
-    ESH_PRINT_CALLBACK(esh, s, NULL);
+    ESH_PRINT_CALLBACK(esh, c, NULL);
 }
 
 
@@ -79,9 +79,9 @@ void esh_do_overflow_callback(esh_t * esh, char const * buffer)
 
 #else // ESH_STATIC_CALLBACKS
 
-void esh_do_print_callback(esh_t * esh, char const * s)
+void esh_do_print_callback(esh_t * esh, char c)
 {
-    esh->print(esh, s, esh->cb_print_arg);
+    esh->print(esh, c, esh->cb_print_arg);
 }
 
 
@@ -328,8 +328,7 @@ static void internal_overflow(esh_t * esh, char const * buffer, void * arg)
 
 bool esh_putc(esh_t * esh, char c)
 {
-    char c_as_string[] = {c, 0};
-    esh_do_print_callback(esh, c_as_string);
+    esh_do_print_callback(esh, c);
     return false;
 }
 

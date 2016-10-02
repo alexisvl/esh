@@ -49,7 +49,7 @@ extern "C" {
         arg: *mut Void);
     fn esh_register_print(
         esh: *mut Esh,
-        cb: extern "C" fn(esh: *mut Esh, s: *const u8, arg: *mut Void),
+        cb: extern "C" fn(esh: *mut Esh, c: u8, arg: *mut Void),
         arg: *mut Void);
     fn esh_register_overflow(
         esh: *mut Esh,
@@ -93,14 +93,11 @@ impl Esh {
         }
     }
 
-    extern "C" fn print_callback_wrapper(esh: *mut Esh, s: *const u8, arg: *mut Void) {
-        let func: fn(&Esh, &[u8]) = unsafe{mem::transmute(arg)};
-
-        let i = strlen(s);
-        let string_slice = unsafe{slice::from_raw_parts(s, i)};
+    extern "C" fn print_callback_wrapper(esh: *mut Esh, c: u8, arg: *mut Void) {
+        let func: fn(&Esh, u8) = unsafe{mem::transmute(arg)};
         let esh_self = unsafe{&*esh};
 
-        func(esh_self, string_slice);
+        func(esh_self, c);
     }
 
     /// Register a callback to print a string.
@@ -109,7 +106,7 @@ impl Esh {
     ///
     /// * `esh` - the originating esh instance, allowing identification
     /// * `s` - the string to print, as a slice of bytes
-    pub fn register_print(&mut self, cb: fn(esh: &Esh, s: &[u8])) {
+    pub fn register_print(&mut self, cb: fn(esh: &Esh, c: u8)) {
         let fp = cb as *mut Void;
         unsafe {
             esh_register_print(self, Esh::print_callback_wrapper, fp);

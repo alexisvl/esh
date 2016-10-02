@@ -41,18 +41,15 @@ fn restore_terminal(sig: i32)
     }
 }
 
-fn esh_print_cb(esh: &Esh, s: &[u8])
+fn esh_print_cb(_esh: &Esh, c: u8)
 {
-    let _ = esh;
-    for c in s {
-        if *c == b'\n' {
-            io::stdout().write(b"\r\n").unwrap();
-        } else {
-            let cs = [*c];
-            io::stdout().write(&cs).unwrap();
-        }
-        io::stdout().flush().unwrap();
+    if c == b'\n' {
+        io::stdout().write(b"\r\n").unwrap();
+    } else {
+        let cs = [c];
+        io::stdout().write(&cs).unwrap();
     }
+    io::stdout().flush().unwrap();
 }
 
 fn esh_command_cb(esh: &Esh, args: &EshArgArray)

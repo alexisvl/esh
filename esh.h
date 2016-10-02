@@ -46,10 +46,10 @@ typedef void (*esh_cb_command)(esh_t * esh, int argc, char ** argv, void * arg);
 /**
  * Callback to print a character.
  * @param esh - the esh instance calling
- * @param s - the string to print
+ * @param c - the character to print
  * @param arg - arbitrary argument you passed to esh_register_print()
  */
-typedef void (*esh_print)(esh_t * esh, char const * s, void * arg);
+typedef void (*esh_print)(esh_t * esh, char c, void * arg);
 
 /**
  * Callback to notify about overflow.
@@ -172,7 +172,7 @@ void esh_restore(esh_t * esh);
 /**
  * Call the print callback. Wrapper to avoid ifdefs for static callback.
  */
-void esh_do_print_callback(esh_t * esh, char const * s);
+void esh_do_print_callback(esh_t * esh, char c);
 
 /**
  * Call the main callback. Wrapper to avoid ifdefs for static callback.
