@@ -2,3 +2,6 @@
 tags
 __pycache__
 demo/demo
+*.d
+*.rlib
+*.ll
