@@ -24,6 +24,7 @@
 
 #![no_std]
 #![crate_name = "esh"]
+#![crate_type = "rlib"]
 use core::ptr;
 use core::mem;
 use core::slice;
