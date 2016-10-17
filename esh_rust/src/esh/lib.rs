@@ -28,7 +28,10 @@
 use core::ptr;
 use core::mem;
 use core::slice;
-use core::ops::Index;
+use core::str;
+use core::marker::PhantomData;
+
+pub use core::str::Utf8Error;
 
 /// The main esh object. This is an opaque object representing an esh instance,
 /// and having methods for interacting with it.
@@ -37,9 +40,10 @@ enum Void {}
 
 /// Argument accessor. Provides a bound-checked interface to argc/argv without
 /// requiring any allocation.
-pub struct EshArgArray {
+pub struct EshArgArray<'a> {
     argc: i32,
     argv: *mut *mut u8,
+    phantom: PhantomData<&'a str>
 }
 
 extern "C" {
@@ -95,10 +99,10 @@ impl Esh {
     }
 
     extern "C" fn print_callback_wrapper(esh: *mut Esh, c: u8, arg: *mut Void) {
-        let func: fn(&Esh, u8) = unsafe{mem::transmute(arg)};
+        let func: fn(&Esh, char) = unsafe{mem::transmute(arg)};
         let esh_self = unsafe{&*esh};
 
-        func(esh_self, c);
+        func(esh_self, c as char);
     }
 
     /// Register a callback to print a string.
@@ -106,8 +110,8 @@ impl Esh {
     /// Callback arguments:
     ///
     /// * `esh` - the originating esh instance, allowing identification
-    /// * `s` - the string to print, as a slice of bytes
-    pub fn register_print(&mut self, cb: fn(esh: &Esh, c: u8)) {
+    /// * `c` - the character to print
+    pub fn register_print(&mut self, cb: fn(esh: &Esh, c: char)) {
         let fp = cb as *mut Void;
         unsafe {
             esh_register_print(self, Esh::print_callback_wrapper, fp);
@@ -118,7 +122,7 @@ impl Esh {
             esh: *mut Esh, argc: i32, argv: *mut *mut u8, arg: *mut Void) {
 
         let func: fn(&Esh, &EshArgArray) = unsafe{mem::transmute(arg)};
-        let argarray = EshArgArray{argc: argc, argv: argv};
+        let argarray = EshArgArray{argc: argc, argv: argv, phantom: PhantomData};
         let esh_self = unsafe{&*esh};
         func(esh_self, &argarray);
     }
@@ -161,7 +165,9 @@ impl Esh {
         }
     }
 
-    /// Pass in a character that was received.
+    /// Pass in a character that was received. This takes u8 instead of
+    /// char because most inputs are byte-oriented; to pass in a Unicode
+    /// character, pass in its UTF-8 representation one byte at a time.
     pub fn rx(&mut self, c: u8) {
         unsafe {
             esh_rx(self, c);
@@ -169,27 +175,32 @@ impl Esh {
     }
 }
 
-impl EshArgArray {
+impl<'a> EshArgArray<'a> {
 
     /// Return the number of arguments, including the command name.
     pub fn len(&self) -> usize {
         return self.argc as usize;
     }
-}
-
-impl Index<usize> for EshArgArray {
-    type Output = [u8];
 
     /// Return an argument. Indices start from zero, with args[0] being the
-    /// command name. If `index` is out of bounds, an empty argument is
-    /// returned.
-    fn index<'a> (&'a self, index: usize) -> &'a [u8] {
+    /// command name. If `index` is out of bounds, panic. If the argument
+    /// cannot be parsed, return Utf8Error.
+    pub fn get_str(&self, index: usize) -> Result<&'a str, Utf8Error>
+    {
+        str::from_utf8(self.get_slice(index))
+    }
+
+    /// Return an argument. Indices start from zero, with args[0] being the
+    /// command name. If `index` is out of bounds, panic.
+    pub fn get_slice(&self, index: usize) -> &'a [u8]
+    {
         if index >= self.argc as usize {
-            return &[];
+            panic!("index out of bounds: the len is {} but the index is {}",
+                   self.argc, index);
         } else {
             let arg = unsafe{*self.argv.offset(index as isize)};
             let len = strlen(arg);
-            return unsafe{slice::from_raw_parts(arg, len)};
+            unsafe{slice::from_raw_parts(arg, len)}
         }
     }
 }

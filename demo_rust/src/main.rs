@@ -41,13 +41,12 @@ fn restore_terminal(sig: i32)
     }
 }
 
-fn esh_print_cb(_esh: &Esh, c: u8)
+fn esh_print_cb(_esh: &Esh, c: char)
 {
-    if c == b'\n' {
-        io::stdout().write(b"\r\n").unwrap();
+    if c == '\n' {
+        print!("\r\n");
     } else {
-        let cs = [c];
-        io::stdout().write(&cs).unwrap();
+        print!("{}", c);
     }
     io::stdout().flush().unwrap();
 }
@@ -60,13 +59,10 @@ fn esh_command_cb(esh: &Esh, args: &EshArgArray)
     println!("argc: {}\r", args.len());
 
     for i in 0..args.len() {
-        print!("argv[{:2}] = ", i);
-        io::stdout().write(&args[i]).unwrap();
-        io::stdout().write(b"\r\n").unwrap();
+        println!("argv[{:2}] = {}\r", i, args.get_str(i).unwrap());
     }
-    io::stdout().flush().unwrap();
 
-    if args[0] == *b"exit" || args[0] == *b"quit" {
+    if args.get_slice(0) == *b"exit" || args.get_slice(0) == *b"quit" {
         restore_terminal(0);
         process::exit(0);
     }
