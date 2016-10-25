@@ -56,7 +56,7 @@ extern "C" {
         esh: *mut Esh,
         cb: extern "C" fn(esh: *mut Esh, c: u8, arg: *mut Void),
         arg: *mut Void);
-    fn esh_register_overflow(
+    fn esh_register_overflow_callback(
         esh: *mut Esh,
         cb: extern "C" fn(*mut Esh, *const u8, *mut Void),
         arg: *mut Void);
@@ -161,7 +161,7 @@ impl Esh {
     pub fn register_overflow(&mut self, cb: fn(esh: &Esh, s: &[u8])) {
         let fp = cb as *mut Void;
         unsafe {
-            esh_register_overflow(self, Esh::overflow_callback_wrapper, fp);
+            esh_register_overflow_callback(self, Esh::overflow_callback_wrapper, fp);
         }
     }
 
