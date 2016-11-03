@@ -11,7 +11,7 @@ use std::process;
 use esh::*;
 
 const STDIN_FILENO: i32 = 1;
-static mut termios_ptr: *mut Termios = ptr::null_mut();
+static mut TERMIOS_PTR: *mut Termios = ptr::null_mut();
 
 extern "C" {
     fn isatty(fd: i32) -> bool;
@@ -30,9 +30,9 @@ macro_rules! println_err(
 fn restore_terminal(sig: i32)
 {
     unsafe {
-        if termios_ptr != ptr::null_mut() {
-            let _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &*termios_ptr);
-            drop(Box::from_raw(termios_ptr));
+        if TERMIOS_PTR != ptr::null_mut() {
+            let _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &*TERMIOS_PTR);
+            drop(Box::from_raw(TERMIOS_PTR));
         }
     }
 
@@ -70,7 +70,7 @@ fn esh_command_cb(esh: &Esh, args: &EshArgArray)
 
 fn set_terminal_raw()
 {
-    let mut term = unsafe{*termios_ptr}.clone();
+    let mut term = unsafe{*TERMIOS_PTR}.clone();
     term.c_iflag &= !(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     term.c_oflag &= !(OPOST);
     term.c_cflag |= CS8;
@@ -93,7 +93,7 @@ fn main()
     }
 
     let termios = Termios::from_fd(STDIN_FILENO).unwrap();
-    unsafe{ termios_ptr = Box::into_raw(Box::new(termios)); }
+    unsafe{ TERMIOS_PTR = Box::into_raw(Box::new(termios)); }
 
     signal!(sig::ffi::Sig::TERM, restore_terminal);
 
