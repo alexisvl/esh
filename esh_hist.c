@@ -35,16 +35,27 @@
 #ifdef ESH_HIST_ALLOC
 // Begin actual history implementation
 
+/**
+ * Initialize the history buffer.
+ *
+ * The initial value is a NUL byte followed by a fill of 0xff. This avoids
+ * the extra empty-string history entry that would be seen if the buffer
+ * were filled with 0x00.
+ */
 static void init_buffer(char * buffer)
 {
     memset(buffer, 0xff, ESH_HIST_LEN);
     buffer[0] = 0;
 }
 
-static int modulo(int a, int b)
+/**
+ * True signed modulo, for wraparound signed arithmetic. This is mathematically
+ * equivalent to "0 + a   mod b".
+ */
+static int modulo(int n, int modulus)
 {
-    int rem = a % b;
-    return (rem >= 0) ? rem : rem + b;
+    int rem = n % modulus;
+    return (rem >= 0) ? rem : rem + modulus;
 }
 
 /**
@@ -62,8 +73,34 @@ static int modulo(int a, int b)
  * Regardless of the callback's return value, iteration will always stop at NUL
  * or if the loop wraps all the way around.
  */
-static void esh_hist_for_each_char(esh_t * esh, int offset,
-        bool (*callback)(esh_t * esh, char c));
+static void for_each_char(esh_t * esh, int offset,
+        bool (*callback)(esh_t * esh, char c))
+{
+    for (int i = offset; esh->hist.hist[i]; i = (i + 1) % ESH_HIST_LEN) {
+        if (i == modulo(offset - 1, ESH_HIST_LEN)) {
+            // Wrapped around and didn't encounter NUL. Stop here to prevent
+            // an infinite loop.
+            return;
+        }
+
+        if (callback(esh, esh->hist.hist[i])) {
+            return;
+        }
+    }
+}
+
+
+/**
+ * Internal callback passed to for_each_char by clobber_buffer
+ */
+static bool clobber_cb(esh_t * esh, char c)
+{
+    esh->buffer[esh->cnt] = c;
+    ++esh->cnt;
+    ++esh->ins;
+    return false;
+}
+
 
 /**
  * Put the selected history item in the buffer. Make sure to call
@@ -71,7 +108,17 @@ static void esh_hist_for_each_char(esh_t * esh, int offset,
  * @param esh - esh instance
  * @param offset - offset into the ring buffer
  */
-static void esh_hist_clobber(esh_t * esh, int offset);
+static void clobber_buffer(esh_t * esh, int offset)
+{
+    if (offset < 0 || offset >= ESH_HIST_LEN) {
+        return;
+    }
+
+    esh->cnt = 0;
+    esh->ins = 0;
+    for_each_char(esh, offset, &clobber_cb);
+}
+
 
 bool esh_hist_init(esh_t * esh)
 {
@@ -92,22 +139,6 @@ bool esh_hist_init(esh_t * esh)
     esh->hist.hist = NULL;
     return false;
 #endif
-}
-
-static void esh_hist_for_each_char(esh_t * esh, int offset,
-        bool (*callback)(esh_t * esh, char c))
-{
-    for (int i = offset; esh->hist.hist[i]; i = (i + 1) % ESH_HIST_LEN) {
-        if (i == modulo(offset - 1, ESH_HIST_LEN)) {
-            // Wrapped around and didn't encounter NUL. Stop here to prevent
-            // an infinite loop.
-            return;
-        }
-
-        if (callback(esh, esh->hist.hist[i])) {
-            return;
-        }
-    }
 }
 
 
@@ -161,29 +192,8 @@ void esh_hist_print(esh_t * esh, int offset)
     esh_print_prompt(esh);
 
     if (offset >= 0) {
-        esh_hist_for_each_char(esh, offset, esh_putc);
+        for_each_char(esh, offset, esh_putc);
     }
-}
-
-
-static bool clobber_helper(esh_t * esh, char c)
-{
-    esh->buffer[esh->cnt] = c;
-    ++esh->cnt;
-    ++esh->ins;
-    return false;
-}
-
-
-static void esh_hist_clobber(esh_t * esh, int offset)
-{
-    if (offset < 0 || offset >= ESH_HIST_LEN) {
-        return;
-    }
-
-    esh->cnt = 0;
-    esh->ins = 0;
-    esh_hist_for_each_char(esh, offset, &clobber_helper);
 }
 
 
@@ -191,7 +201,7 @@ bool esh_hist_substitute(esh_t * esh)
 {
     if (esh->hist.idx) {
         int offset = esh_hist_nth(esh, esh->hist.idx - 1);
-        esh_hist_clobber(esh, offset);
+        clobber_buffer(esh, offset);
         esh_restore(esh);
         esh->hist.idx = 0;
         return true;
