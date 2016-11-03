@@ -7,6 +7,7 @@ build = "build.rs"
 [dependencies]
 termios = "0.2.2"
 sig = "0.1.1"
+lazy_static = "0.1.*"
 
 [dependencies.esh]
 path = "../esh_rust"

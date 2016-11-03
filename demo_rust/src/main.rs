@@ -2,16 +2,18 @@
 
 extern crate esh;
 extern crate termios;
-#[macro_use]
-extern crate sig;
+#[macro_use] extern crate sig;
+#[macro_use] extern crate lazy_static;
 use termios::*;
 use std::io;
-use std::ptr;
 use std::process;
+use std::sync::*;
 use esh::*;
 
 const STDIN_FILENO: i32 = 1;
-static mut TERMIOS_PTR: *mut Termios = ptr::null_mut();
+lazy_static! {
+    static ref TERMIOS: Mutex<Termios> = Mutex::new(Termios::from_fd(STDIN_FILENO).unwrap());
+}
 
 extern "C" {
     fn isatty(fd: i32) -> bool;
@@ -29,12 +31,8 @@ macro_rules! println_err(
 
 fn restore_terminal(sig: i32)
 {
-    unsafe {
-        if TERMIOS_PTR != ptr::null_mut() {
-            let _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &*TERMIOS_PTR);
-            drop(Box::from_raw(TERMIOS_PTR));
-        }
-    }
+    let termios = *TERMIOS.lock().unwrap();
+    let _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &termios);
 
     if sig == 15 {
         process::exit(0);
@@ -70,15 +68,15 @@ fn esh_command_cb(esh: &Esh, args: &EshArgArray)
 
 fn set_terminal_raw()
 {
-    let mut term = unsafe{*TERMIOS_PTR}.clone();
-    term.c_iflag &= !(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-    term.c_oflag &= !(OPOST);
-    term.c_cflag |= CS8;
-    term.c_lflag &= !(ECHO | ICANON | IEXTEN | ISIG);
-    term.c_cc[VMIN] = 0;
-    term.c_cc[VTIME] = 8;
+    let mut newterm = TERMIOS.lock().unwrap().clone();
+    newterm.c_iflag &= !(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    newterm.c_oflag &= !(OPOST);
+    newterm.c_cflag |= CS8;
+    newterm.c_lflag &= !(ECHO | ICANON | IEXTEN | ISIG);
+    newterm.c_cc[VMIN] = 0;
+    newterm.c_cc[VTIME] = 8;
 
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &term).unwrap();
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &newterm).unwrap();
 }
 
 fn main()
@@ -92,8 +90,8 @@ fn main()
         process::exit(1);
     }
 
-    let termios = Termios::from_fd(STDIN_FILENO).unwrap();
-    unsafe{ TERMIOS_PTR = Box::into_raw(Box::new(termios)); }
+    // Initialize termios
+    *TERMIOS.lock().unwrap();
 
     signal!(sig::ffi::Sig::TERM, restore_terminal);
 
