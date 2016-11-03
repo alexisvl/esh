@@ -111,21 +111,22 @@ static void esh_hist_for_each_char(esh_t * esh, int offset,
 
 int esh_hist_nth(esh_t * esh, int n)
 {
-    for (int i = esh->hist.tail ? esh->hist.tail - 1 : ESH_HIST_LEN - 1;
-            ;
-            i = (i? i - 1 : ESH_HIST_LEN - 1)) {
+    const int start =
+        (esh->hist.tail > 0)
+            ? esh->hist.tail - 1
+            : ESH_HIST_LEN - 1;
 
+    const int stop = (esh->hist.tail + 1) % ESH_HIST_LEN;
+
+    for (int i = start; i != stop; i = (i? i - 1 : ESH_HIST_LEN - 1)) {
         if (n && esh->hist.hist[i] == 0) {
             --n;
         } else if (esh->hist.hist[i] == 0) {
             return (i + 1) % ESH_HIST_LEN;
         }
-
-        if (i == (esh->hist.tail + 1) % ESH_HIST_LEN) {
-            // Wrapped around
-            return -1;
-        }
     }
+
+    return -1;
 }
 
 
