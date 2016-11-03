@@ -41,6 +41,12 @@ static void init_buffer(char * buffer)
     buffer[0] = 0;
 }
 
+static int modulo(int a, int b)
+{
+    int rem = a % b;
+    return (rem >= 0) ? rem : rem + b;
+}
+
 /**
  * Given an offset in the ring buffer, call the callback once for each
  * character in the string starting there. This is meant to abstract away
@@ -91,12 +97,8 @@ bool esh_hist_init(esh_t * esh)
 static void esh_hist_for_each_char(esh_t * esh, int offset,
         bool (*callback)(esh_t * esh, char c))
 {
-    for (int i = offset;
-            esh->hist.hist[i];
-            i = (i + 1) % ESH_HIST_LEN)
-    {
-        if ((offset && (i == offset - 1)) ||
-                (offset == 0 && (i == ESH_HIST_LEN - 1))) {
+    for (int i = offset; esh->hist.hist[i]; i = (i + 1) % ESH_HIST_LEN) {
+        if (i == modulo(offset - 1, ESH_HIST_LEN)) {
             // Wrapped around and didn't encounter NUL. Stop here to prevent
             // an infinite loop.
             return;
@@ -111,14 +113,10 @@ static void esh_hist_for_each_char(esh_t * esh, int offset,
 
 int esh_hist_nth(esh_t * esh, int n)
 {
-    const int start =
-        (esh->hist.tail > 0)
-            ? esh->hist.tail - 1
-            : ESH_HIST_LEN - 1;
-
+    const int start = modulo(esh->hist.tail - 1, ESH_HIST_LEN);
     const int stop = (esh->hist.tail + 1) % ESH_HIST_LEN;
 
-    for (int i = start; i != stop; i = (i? i - 1 : ESH_HIST_LEN - 1)) {
+    for (int i = start; i != stop; i = modulo(i - 1, ESH_HIST_LEN)) {
         if (n && esh->hist.hist[i] == 0) {
             --n;
         } else if (esh->hist.hist[i] == 0) {
@@ -132,14 +130,11 @@ int esh_hist_nth(esh_t * esh, int n)
 
 bool esh_hist_add(esh_t * esh, char const * s)
 {
-    int i;
+    const int start = (esh->hist.tail + 1) % ESH_HIST_LEN;
 
-    for (i = (esh->hist.tail + 1) % ESH_HIST_LEN;
-            ;
-            i = (i + 1) % ESH_HIST_LEN)
+    for (int i = start; ; i = (i + 1) % ESH_HIST_LEN)
     {
-        if ((esh->hist.tail && (i == esh->hist.tail - 1)) ||
-                (esh->hist.tail == 0 && (i == ESH_HIST_LEN - 1))) {
+        if (i == modulo(esh->hist.tail - 1, ESH_HIST_LEN)) {
             // Wrapped around
             esh->hist.tail = 0;
             init_buffer(esh->hist.hist);
@@ -151,12 +146,10 @@ bool esh_hist_add(esh_t * esh, char const * s)
         if (*s) {
             ++s;
         } else {
-            break;
+            esh->hist.tail = i;
+            return false;
         }
     }
-
-    esh->hist.tail = i;
-    return false;
 }
 
 
