@@ -270,6 +270,14 @@ cmove: // micro-optimization, yo!
 static void execute_command(esh_t * esh)
 {
     esh_hist_substitute(esh);
+
+    if (esh->cnt >= ESH_BUFFER_LEN) {
+        esh_do_overflow_callback(esh, esh->buffer);
+        esh->cnt = esh->ins = 0;
+        esh_print_prompt(esh);
+        return;
+    }
+
     esh_putc(esh, '\n');
 
     // Have to add to the history buffer before make_arg_array messes it up.
@@ -307,11 +315,9 @@ static void handle_char(esh_t * esh, char c)
     if (esh->cnt >= ESH_BUFFER_LEN) {
         esh->cnt = ESH_BUFFER_LEN + 1;
         esh->buffer[ESH_BUFFER_LEN] = 0;
-        esh_do_overflow_callback(esh, esh->buffer);
-        return;
+    } else {
+        ins_del(esh, c);
     }
-
-    ins_del(esh, c);
 }
 
 
@@ -325,7 +331,7 @@ static void internal_overflow(esh_t * esh, char const * buffer, void * arg)
 {
     (void) buffer;
     (void) arg;
-    esh_puts(esh, FSTR("\n\nesh: command buffer overflow\n"));
+    esh_puts(esh, FSTR("\nesh: command buffer overflow\n"));
 }
 
 
