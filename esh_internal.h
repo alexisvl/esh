@@ -31,6 +31,12 @@
 #include <esh_incl_config.h>
 #include <esh_hist.h>
 
+#ifdef ESH_RUST
+struct char_slice {
+    char *p;
+    size_t sz;
+};
+#endif
 
 /**
  * @internal
@@ -38,7 +44,19 @@
  */
 typedef struct esh {
     char buffer[ESH_BUFFER_LEN + 1];
+
+    // We need 'fat' pointers for argv in Rust. Rust still does not provide
+    // 'alloca', and there's no easy way to get at ESH_ARGC_MAX as a
+    // compile-time constant from Rust (without bringing in external tools,
+    // which I don't want to depend on for esh), so provide the space here.
+#ifdef ESH_RUST
+    union {
+        char * argv[ESH_ARGC_MAX];
+        struct char_slice rust_argv[ESH_ARGC_MAX];
+    };
+#else
     char * argv[ESH_ARGC_MAX];
+#endif
     size_t cnt;
     size_t ins;
     uint_fast8_t flags;
@@ -106,6 +124,15 @@ void esh_do_callback(esh_t * esh, int argc, char ** argv);
  */
 void esh_do_overflow_callback(esh_t * esh, char const * buffer);
 
+#ifdef ESH_RUST
+/**
+ * Return what we think the size of a Rust &[u8] slice is. This is used to
+ * verify that the statically allocated slice array is long enough, and also
+ * to make sure a linker error is produced if ESH_RUST wasn't enabled
+ * (which would mean the slice array wasn't allocated at all).
+ */
+size_t esh_get_slice_size(void);
+#endif
 
 #define ESC_CURSOR_RIGHT    "\33[1C"
 #define ESC_CURSOR_LEFT     "\33[1D"

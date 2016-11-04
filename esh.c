@@ -361,6 +361,14 @@ void esh_restore(esh_t * esh)
 }
 
 
+#ifdef ESH_RUST
+size_t esh_get_slice_size(void)
+{
+    return sizeof (struct char_slice);
+}
+#endif
+
+
 /**
  * Move only the terminal cursor. This does not move the insertion point.
  */

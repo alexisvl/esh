@@ -29,20 +29,11 @@ use core::ptr;
 use core::mem;
 use core::slice;
 use core::str;
-use core::marker::PhantomData;
 
 /// The main esh object. This is an opaque object representing an esh instance,
 /// and having methods for interacting with it.
 pub enum Esh {}
 enum Void {}
-
-/// Argument accessor. Provides a bound-checked interface to argc/argv without
-/// requiring any allocation.
-pub struct EshArgArray<'a> {
-    argc: i32,
-    argv: *mut *mut u8,
-    phantom: PhantomData<&'a str>
-}
 
 extern "C" {
     fn esh_init() -> *mut Esh;
@@ -59,6 +50,7 @@ extern "C" {
         cb: extern "C" fn(*mut Esh, *const u8, *mut Void),
         arg: *mut Void);
     fn esh_rx(esh: *mut Esh, c: u8);
+    fn esh_get_slice_size() -> usize;
 }
 
 fn strlen(s: *const u8) -> usize {
@@ -74,6 +66,37 @@ fn strlen(s: *const u8) -> usize {
     return i;
 }
 
+/// Remap argv[] to a slice array in-place, returning the slice array.
+/// This is unsafe as hell. It depends on esh_internal.h having defined argv
+/// as a union of a char array and a slice array, to guarantee that we have
+/// enough space for the slices.
+///
+/// This will verify (at runtime, unfortunately) that C and Rust agree on how
+/// long a slice is, and panic otherwise.
+unsafe fn map_argv_to_slice<'a>(argv: *mut *mut u8, argc: i32) ->&'a[&'a str]
+{
+    if ::core::mem::size_of::<&str>() != esh_get_slice_size() {
+        panic!("Expected size of string slice in esh_internal.h does \
+                not match with real size!");
+    }
+
+    // The mapping is done in place to conserve memory. (Sorry! but embedded
+    // devices tend to have quite restricted RAM.) The mapping is done in from
+    // the right end to keep things from stepping on each other.
+
+    let as_slices: *mut &'a str = mem::transmute(argv);
+
+    for i in 0..(argc as isize) {
+        let source = argv.offset(argc as isize - i - 1);
+        let target = as_slices.offset(argc as isize - i - 1);
+
+        let as_u8slice = slice::from_raw_parts(*source, strlen(*source));
+        *target = str::from_utf8_unchecked(as_u8slice);
+    }
+
+    slice::from_raw_parts(as_slices, argc as usize)
+}
+
 impl Esh {
     /// Return an initialized esh object. Must be called before any other
     /// functions.
@@ -82,6 +105,11 @@ impl Esh {
     /// `MALLOC`. If `STATIC`, `ESH_INSTANCES` must be defined to the
     /// maximum number of instances, and references to these instances
     /// will be returned.
+    ///
+    /// Note that the reference is always `'static`, even when MALLOC is used.
+    /// This is because esh has no destructor: despite being allocated on
+    /// demand, it will never be destroyed, so from the moment it is returned
+    /// it can be considered to have infinite lifetime.
     ///
     /// Return value:
     ///
@@ -119,10 +147,12 @@ impl Esh {
     extern "C" fn command_callback_wrapper(
             esh: *mut Esh, argc: i32, argv: *mut *mut u8, arg: *mut Void) {
 
-        let func: fn(&Esh, &EshArgArray) = unsafe{mem::transmute(arg)};
-        let argarray = EshArgArray{argc: argc, argv: argv, phantom: PhantomData};
+        let func: fn(&Esh, &[&str]) = unsafe{mem::transmute(arg)};
+
+        // Unsafe: this poisons argv! Don't use argv after this.
+        let argv_slices = unsafe{map_argv_to_slice(argv, argc)};
         let esh_self = unsafe{&*esh};
-        func(esh_self, &argarray);
+        func(esh_self, argv_slices);
     }
 
     /// Register a callback to execute a command.
@@ -131,7 +161,7 @@ impl Esh {
     ///
     /// * `esh` - the originating esh instance, allowing identification
     /// * `args` - a reference to an argument accessor object
-    pub fn register_command(&mut self, cb: fn(esh: &Esh, args: &EshArgArray)) {
+    pub fn register_command(&mut self, cb: fn(esh: &Esh, args: &[&str])) {
         let fp = cb as *mut Void;
         unsafe {
             esh_register_command(self, Esh::command_callback_wrapper, fp);
@@ -172,36 +202,3 @@ impl Esh {
         }
     }
 }
-
-impl<'a> EshArgArray<'a> {
-
-    /// Return the number of arguments, including the command name.
-    pub fn len(&self) -> usize {
-        return self.argc as usize;
-    }
-
-    /// Return an argument. Indices start from zero, with args[0] being the
-    /// command name. If `index` is out of bounds, panic.
-    pub fn get_str(&self, index: usize) -> &'a str
-    {
-        let slice = self.get_slice(index);
-        // This is safe: esh rejects any characters outside basic 7-bit
-        // ASCII, which are also valid UTF-8.
-        unsafe{str::from_utf8_unchecked(slice)}
-    }
-
-    /// Return an argument. Indices start from zero, with args[0] being the
-    /// command name. If `index` is out of bounds, panic.
-    pub fn get_slice(&self, index: usize) -> &'a [u8]
-    {
-        if index >= self.argc as usize {
-            panic!("index out of bounds: the len is {} but the index is {}",
-                   self.argc, index);
-        } else {
-            let arg = unsafe{*self.argv.offset(index as isize)};
-            let len = strlen(arg);
-            unsafe{slice::from_raw_parts(arg, len)}
-        }
-    }
-}
-

@@ -49,18 +49,17 @@ fn esh_print_cb(_esh: &Esh, c: char)
     io::stdout().flush().unwrap();
 }
 
-fn esh_command_cb(esh: &Esh, args: &EshArgArray)
+fn esh_command_cb(esh: &Esh, args: &[&str])
 {
     let _ = esh;
-    let _ = args;
 
     println!("argc: {}\r", args.len());
 
     for i in 0..args.len() {
-        println!("argv[{:2}] = {}\r", i, args.get_str(i));
+        println!("argv[{:2}] = {}\r", i, args[i]);
     }
 
-    if args.get_slice(0) == *b"exit" || args.get_slice(0) == *b"quit" {
+    if *args[0] == *"exit" || *args[0] == *"quit" {
         restore_terminal(0);
         process::exit(0);
     }

@@ -7,3 +7,5 @@
 
 #define ESH_ALLOC STATIC
 #define ESH_INSTANCES 1
+
+#define ESH_RUST 1
