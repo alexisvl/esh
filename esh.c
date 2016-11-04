@@ -182,7 +182,10 @@ void esh_rx(esh_t * esh, char c)
             esh->flags &= ~(IN_ESCAPE | IN_BRACKET_ESCAPE);
         }
     } else {
-        if (isprint(c)) {
+        // Verify the c is valid non-extended ASCII (and thus also valid
+        // UTF-8, for Rust), regardless of whether this platform's isprint()
+        // accepts things above 0x7f.
+        if (isprint(c) && (unsigned char) c <= 0x7f) {
             handle_char(esh, c);
         } else {
             handle_ctrl(esh, c);

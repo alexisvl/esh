@@ -31,8 +31,6 @@ use core::slice;
 use core::str;
 use core::marker::PhantomData;
 
-pub use core::str::Utf8Error;
-
 /// The main esh object. This is an opaque object representing an esh instance,
 /// and having methods for interacting with it.
 pub enum Esh {}
@@ -183,11 +181,13 @@ impl<'a> EshArgArray<'a> {
     }
 
     /// Return an argument. Indices start from zero, with args[0] being the
-    /// command name. If `index` is out of bounds, panic. If the argument
-    /// cannot be parsed, return Utf8Error.
-    pub fn get_str(&self, index: usize) -> Result<&'a str, Utf8Error>
+    /// command name. If `index` is out of bounds, panic.
+    pub fn get_str(&self, index: usize) -> &'a str
     {
-        str::from_utf8(self.get_slice(index))
+        let slice = self.get_slice(index);
+        // This is safe: esh rejects any characters outside basic 7-bit
+        // ASCII, which are also valid UTF-8.
+        unsafe{str::from_utf8_unchecked(slice)}
     }
 
     /// Return an argument. Indices start from zero, with args[0] being the

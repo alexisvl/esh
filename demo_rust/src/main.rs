@@ -57,7 +57,7 @@ fn esh_command_cb(esh: &Esh, args: &EshArgArray)
     println!("argc: {}\r", args.len());
 
     for i in 0..args.len() {
-        println!("argv[{:2}] = {}\r", i, args.get_str(i).unwrap());
+        println!("argv[{:2}] = {}\r", i, args.get_str(i));
     }
 
     if args.get_slice(0) == *b"exit" || args.get_slice(0) == *b"quit" {
