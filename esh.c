@@ -56,14 +56,14 @@ static void term_cursor_move(esh_t * esh, int n);
 static void cursor_move(esh_t * esh, int n);
 
 #ifdef ESH_STATIC_CALLBACKS
-extern void ESH_PRINT_CALLBACK(esh_t * esh, char const * s, void * arg);
+extern void ESH_PRINT_CALLBACK(esh_t * esh, char c, void * arg);
 extern void ESH_COMMAND_CALLBACK(
     esh_t * esh, int argc, char ** argv, void * arg);
 __attribute__((weak))
 void ESH_OVERFLOW_CALLBACK(esh_t * esh, char const * buffer, void * arg)
 {
     (void) arg;
-    internal_overflow(esh, buffer);
+    internal_overflow(esh, buffer, arg);
 }
 #else
 void esh_register_command(esh_t * esh, esh_cb_command callback, void * arg)
