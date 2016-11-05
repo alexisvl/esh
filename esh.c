@@ -37,6 +37,7 @@
 enum esh_flags {
     IN_ESCAPE = 0x01,
     IN_BRACKET_ESCAPE = 0x02,
+    IN_NUMERIC_ESCAPE = 0x04,
 };
 
 static void internal_overflow(esh_t * esh, char const * buffer, void * arg);
@@ -170,11 +171,8 @@ esh_t * esh_init(void)
 
 void esh_rx(esh_t * esh, char c)
 {
-    if (esh->flags & IN_BRACKET_ESCAPE) {
-        if (isalpha(c)) {
-            esh->flags &= ~(IN_ESCAPE | IN_BRACKET_ESCAPE);
-            handle_esc(esh, c);
-        }
+    if (esh->flags & (IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE)) {
+        handle_esc(esh, c);
     } else if (esh->flags & IN_ESCAPE) {
         if (c == '[' || c == 'O') {
             esh->flags |= IN_BRACKET_ESCAPE;
@@ -225,6 +223,21 @@ static void handle_ctrl(esh_t * esh, char c)
 static void handle_esc(esh_t * esh, char esc)
 {
     int cdelta;
+
+    if (esc >= '0' && esc <= '9') {
+        esh->flags |= IN_ESCAPE | IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE;
+        return;
+    }
+
+    if (esh->flags & IN_NUMERIC_ESCAPE) {
+        // Numeric escapes can contain numbers and semicolons; they terminate
+        // at letters and ~
+        if (esc == '~' || isalpha(esc)) {
+            esh->flags &= ~(IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE | IN_ESCAPE);
+        }
+    } else {
+        esh->flags &= ~(IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE | IN_ESCAPE);
+    }
 
     switch (esc) {
     case ESCCHAR_UP:
