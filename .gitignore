@@ -2,6 +2,7 @@
 tags
 __pycache__
 demo/demo
+demo_static/demo
 *.d
 *.rlib
 *.ll
