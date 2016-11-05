@@ -74,11 +74,11 @@
  * Unless you're using static callbacks (see below), register your callbacks
  * with:
  *
- *     esh_register_command(esh, &command_callback, argument_for_callback);
- *     esh_register_print(esh, &print_callback, argument_for_callback);
+ *     esh_register_command(esh, &command_callback);
+ *     esh_register_print(esh, &print_callback);
  *
  *     // Optional, see the documentation for this function:
- *     esh_register_overflow(esh, &overflow_callback, arg_for_callback);
+ *     esh_register_overflow(esh, &overflow_callback);
  *
  * Now, just begin receiving characters from your serial interface and feeding
  * them in with:
