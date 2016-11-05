@@ -1,4 +1,6 @@
-/* esh - embedded shell
+/**
+ * esh - embedded shell
+ * Internal, private declarations and types
  *
  * Copyright (c) 2016, Chris Pavlina.
  *
@@ -22,7 +24,7 @@
  */
 
 #ifndef ESH_INTERNAL_INCLUDE
-#error "esh_internal.h is an internal header and should not be included by the user."
+#error "esh_internal.h is an internal file and should not be included directly"
 #endif // ESH_INTERNAL_INCLUDE
 
 #ifndef ESH_INTERNAL_H
@@ -30,6 +32,16 @@
 
 #include <esh_incl_config.h>
 #include <esh_hist.h>
+
+/**
+ * If we're building for Rust, we need to know the size of a &[u8] in order
+ * to allocate space for it. This definition should be equivalent. Because the
+ * internal representation of a slice has not been stabilized [1], this is not
+ * guaranteed to remain constant in the future; the Rust bindings will check
+ * sizeof(struct char_slice) against mem::size_of::<&[u8]>().
+ *
+ * [1] https://github.com/rust-lang/rust/issues/27751
+ */
 
 #ifdef ESH_RUST
 struct char_slice {
@@ -39,16 +51,20 @@ struct char_slice {
 #endif
 
 /**
- * @internal
- * esh instance struct.
+ * esh instance struct. This holds all of the state that needs to be saved
+ * between calls to esh_rx().
  */
 typedef struct esh {
+    /**
+     * The config item ESH_BUFFER_LEN is only the number of characters to be
+     * stored, not characters plus termination.
+     */
     char buffer[ESH_BUFFER_LEN + 1];
 
-    // We need 'fat' pointers for argv in Rust. Rust still does not provide
-    // 'alloca', and there's no easy way to get at ESH_ARGC_MAX as a
-    // compile-time constant from Rust (without bringing in external tools,
-    // which I don't want to depend on for esh), so provide the space here.
+    /**
+     * The Rust bindings require space allocated for an argv array of &[u8],
+     * which can share memory with C's char* array to save limited SRAM.
+     */
 #ifdef ESH_RUST
     union {
         char * argv[ESH_ARGC_MAX];
@@ -57,26 +73,29 @@ typedef struct esh {
 #else
     char * argv[ESH_ARGC_MAX];
 #endif
-    size_t cnt;
-    size_t ins;
-    uint_fast8_t flags;
+
+    size_t cnt;             ///< Number of characters currently held in .buffer
+    size_t ins;             ///< Position of the current insertion point
+    uint8_t flags;          ///< State flags for escape sequence parser
     struct esh_hist hist;
 #ifndef ESH_STATIC_CALLBACKS
     esh_cb_command cb_command;
-    esh_print print;
-    esh_overflow overflow;
+    esh_cb_print print;
+    esh_cb_overflow overflow;
     void *cb_command_arg;
     void *cb_print_arg;
     void *cb_overflow_arg;
 #endif
 } esh_t;
 
-/******************************************************************************
- * INTERNAL FUNCTIONS shared by esh.c and esh_hist.c
+/**
+ * On AVR, a number of strings should be stored in and read from flash space.
+ * Other architectures have linearized address spaces and don't require this.
  */
-
 #ifdef __AVR_ARCH__
-#   define FSTR(s) (__extension__({static const __flash char __c[] = (s); &__c[0];}))
+#   define FSTR(s) (__extension__({ \
+            static const __flash char __c[] = (s); \
+            &__c[0];}))
 #   define AVR_ONLY(x) x
 #else
 #   define FSTR(s) (s)
@@ -84,7 +103,6 @@ typedef struct esh {
 #endif // __AVR_ARCH__
 
 /**
- * @internal
  * Print one character.
  * @return false (allows it to be an esh_hist_for_each_char callback)
  */
@@ -97,14 +115,12 @@ bool esh_putc(esh_t * esh, char c);
 bool esh_puts(esh_t * esh, char const AVR_ONLY(__memx) * s);
 
 /**
- * @internal
- * Print the prompt
+ * Print the prompt string
  */
 void esh_print_prompt(esh_t * esh);
 
 /**
  * Overwrite the prompt and restore the buffer.
- * @param esh - esh instance
  */
 void esh_restore(esh_t * esh);
 

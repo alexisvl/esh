@@ -73,16 +73,16 @@ void esh_register_command(esh_t * esh, esh_cb_command callback, void * arg)
 }
 
 
-void esh_register_print(esh_t * esh, esh_print callback, void * arg)
+void esh_register_print(esh_t * esh, esh_cb_print callback, void * arg)
 {
     esh->print = callback;
     esh->cb_print_arg = arg;
 }
 
 
-void esh_register_overflow_callback(
+void esh_register_overflow(
         esh_t * esh,
-        esh_overflow overflow,
+        esh_cb_overflow overflow,
         void * arg)
 {
     esh->overflow = (overflow ? overflow : &internal_overflow);

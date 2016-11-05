@@ -1,4 +1,17 @@
-/* esh - embedded shell
+/**
+ * esh - embedded shell
+ * ====================
+ *
+ * *****************************************************************************
+ * * PLEASE read ALL of this documentation (all comment blocks starting with a *
+ * * double-asterisk **). esh is simple, but a number of things need to be     *
+ * * addressed by every esh user.                                              *
+ * *****************************************************************************
+ *
+ * esh is a lightweight command shell for embedded applications in C or rust,
+ * small enough to be used for (and intended for) debug UART consoles on
+ * microcontrollers. Features include line editing, automatic argument
+ * tokenizing (including sh-like quoting), and an optional history ring buffer.
  *
  * Copyright (c) 2016, Chris Pavlina.
  *
@@ -9,8 +22,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -19,6 +32,124 @@
  * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
  * OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * -----------------------------------------------------------------------------
+ *
+ * 1.   Rust users
+ * 2.   Configuring esh
+ * 2.1.     Line endings
+ * 2.2.     Static callbacks
+ * 2.3.     History (optional)
+ * 3.   Compiling esh
+ * 4.   Code documentation
+ * 4.1.     Basic interface: initialization and input
+ * 4.2.     Callback types and registration functions
+ * 4.3.     Advanced functions
+ *
+ * -----------------------------------------------------------------------------
+ *
+ * 1. Rust users
+ * =============
+ *
+ * The Rust API and configuration is different, so if you want to use esh with
+ * Rust, see esh_rust/src/esh/lib.rs for separate documentation. None of this
+ * documentation (including the definitions for `esh_config.h`) applies.
+ *
+ * 2. Configuring esh
+ * ==================
+ *
+ * esh expects a file called `esh_config.h` to be on the quoted include path. It
+ * should define the following:
+ *
+ *     #define ESH_PROMPT       "% "        // Prompt string
+ *     #define ESH_BUFFER_LEN   200         // Maximum length of a command
+ *     #define ESH_ARGC_MAX     10          // Maximum argument count
+ *     #define ESH_ALLOC        STATIC      // How to allocate esh_t (or MALLOC)
+ *     #define ESH_INSTANCES    1           // Number of instances, if ^=STATIC
+ *
+ * Then, to use esh, include `esh.h`, and initialize an esh instance with:
+ *
+ *     esh_t * esh = esh_init();
+ *
+ * Unless you're using static callbacks (see below), register your callbacks
+ * with:
+ *
+ *     esh_register_command(esh, &command_callback, argument_for_callback);
+ *     esh_register_print(esh, &print_callback, argument_for_callback);
+ *
+ *     // Optional, see the documentation for this function:
+ *     esh_register_overflow(esh, &overflow_callback, arg_for_callback);
+ *
+ * Now, just begin receiving characters from your serial interface and feeding
+ * them in with:
+ *
+ *     esh_rx(esh, c);
+ *
+ * 2.1. Line endings
+ * -----------------
+ *
+ * Internally, esh uses strictly `\n` line endings. A great many IO sources use
+ * different line endings; the user is responsible for translating them for esh.
+ * In general, most raw-mode unix-like terminals will give `\r` from the
+ * keyboard and require `\r\n` as output, so your input functions should
+ * translate `\r` to `\n`, and your output function should insert `\r` before
+ * `\n`.
+ *
+ * 2.2. Static callbacks
+ * ---------------------
+ *
+ * If you're only using one esh instance, or all your esh instances use the
+ * same callbacks, callbacks can be compiled in statically, saving a bit of code
+ * space, runtime, and RAM from keeping and following the pointers. Add the
+ * following to your `esh_config.h`:
+ *
+ *     #define ESH_STATIC_CALLBACKS
+ *
+ * Now, simply name your callback functions `ESH_PRINT_CALLBACK`,
+ * `ESH_COMMAND_CALLBACK`, and `ESH_OVERFLOW_CALLBACK` (the overflow callback
+ * is still optional), and the linker will find them. The esh_register_*
+ * functions are not defined when ESH_STATIC_CALLBACKS is set.
+ *
+ * 2.3. History (optional)
+ * -----------------------
+ *
+ * To enable the optional history, define the following in `esh_config.h`:
+ *
+ *     #define ESH_HIST_ALLOC   STATIC      // STATIC, MANUAL, or MALLOC
+ *     #define ESH_HIST_LEN     512         // Length. Use powers of 2 for
+ *                                          //   efficiency on arithmetic-weak
+ *                                          //   devices.
+ *
+ * If you chose `MANUAL` allocation, call `esh_set_histbuf()` once you have
+ * allocated your own buffer of length ESH_HIST_LEN:
+ *
+ *     esh_set_histbuf(esh, &buffer[0]);
+ *
+ * Manual allocation was created for one specific purpose: history buffer in
+ * external SRAM on AVR (the compiler and allocator don't generally know about
+ * external SRAM unless you jump through hoops). However, it's there for
+ * whatever you like :)
+ *
+ * WARNING: static allocation is only valid when using a SINGLE esh instance.
+ * Using multiple esh instances with static allocation is undefined and WILL
+ * make demons fly out your nose.
+ *
+ * 3. Compiling esh
+ * ================
+ *
+ * esh has no build script of its own; building it is trivial and it's meant to
+ * be integrated directly into your project.
+ *
+ *  1. Put the `esh` subdirectory on the include path.
+ *  2. Make sure `esh_config.h` is on the quoted include path (`-iquote`).
+ *  3. Make sure selected C standard is one of `c99`, `c11`, `gnu99`, or
+ *       `gnu11`. On AVR, use only `gnu99` or `gnu11` (esh on AVR uses the
+ *       Named Address Spaces GNU extension).
+ *  4. Include *all* esh C source files in the build (whether or not you used
+ *       the feature - e.g. esh_hist.c).
+ *
+ * esh should compile quietly with most warning settings, including
+ * `-Wall -Wextra -pedantic`.
  */
 
 #ifndef ESH_H
@@ -34,33 +165,18 @@
 
 struct esh;
 
-#ifndef ESH_STATIC_CALLBACKS
 /**
- * Callback to handle commands.
- * @param argc - number of arguments, including the command name
- * @param argv - arguments
- * @param arg - arbitrary argument you passed to esh_register_command()
+ * -----------------------------------------------------------------------------
+ *
+ * 4. Code documentation
  */
-typedef void (*esh_cb_command)(esh_t * esh, int argc, char ** argv, void * arg);
 
 /**
- * Callback to print a character.
- * @param esh - the esh instance calling
- * @param c - the character to print
- * @param arg - arbitrary argument you passed to esh_register_print()
+ * -----------------------------------------------------------------------------
+ * 4.1. Basic interface: initialization and input
  */
-typedef void (*esh_print)(esh_t * esh, char c, void * arg);
 
-/**
- * Callback to notify about overflow.
- * @param esh - the esh instance calling
- * @param buffer - the internal buffer, NUL-terminated
- * @param arg - arbitrary argument you passed to esh_register_overflow()
- */
-typedef void (*esh_overflow)(esh_t * esh, char const * buffer, void * arg);
-#endif // ESH_STATIC_CALLBACKS
-
-/**
+/*
  * Return a pointer to an initialized esh object. Must be called before
  * any other functions.
  *
@@ -74,40 +190,98 @@ typedef void (*esh_overflow)(esh_t * esh, char const * buffer, void * arg);
  *      buffer, and malloc returns NULL
  *  - using static allocation and you tried to initialize more than
  *      ESH_INSTANCES.
+ *  - whichever allocation method was chosen for ESH_HIST_ALLOC, if any,
+ *      failed.
  */
 esh_t * esh_init(void);
 
+/**
+ * Pass in a character that was received.
+ */
+void esh_rx(
+        esh_t * esh,
+        char    c);
+
+
+
 #ifndef ESH_STATIC_CALLBACKS
+/**
+ * -----------------------------------------------------------------------------
+ * 4.2. Callback types and registration functions
+ */
+
+/**
+ * Callback to handle commands.
+ * @param argc - number of arguments, including the command name
+ * @param argv - arguments
+ * @param arg - arbitrary argument passed to esh_register_command()
+ */
+typedef void (*esh_cb_command)(
+        esh_t * esh,
+        int     argc,
+        char ** argv,
+        void *  arg);
+
+/**
+ * Callback to print a character.
+ * @param esh - the esh instance calling
+ * @param c - the character to print
+ * @param arg - arbitrary argument passed to esh_register_print()
+ */
+typedef void (*esh_cb_print)(
+        esh_t * esh,
+        char    c,
+        void *  arg);
+
+/**
+ * Callback to notify about overflow.
+ * @param esh - the esh instance calling
+ * @param buffer - the internal buffer, NUL-terminated
+ * @param arg - arbitrary argument passed to esh_register_overflow_callback()
+ */
+typedef void (*esh_cb_overflow)(
+        esh_t *         esh,
+        char const *    buffer,
+        void *          arg);
+
 /**
  * Register a callback to execute a command.
  * @param arg - arbitrary argument to pass to the callback
  */
-void esh_register_command(esh_t * esh, esh_cb_command callback, void * arg);
+void esh_register_command(
+        esh_t *         esh,
+        esh_cb_command  callback,
+        void *          arg);
 
 /**
  * Register a callback to print a character.
  * @param arg - arbitrary argument to pass to the callback
  */
-void esh_register_print(esh_t * esh, esh_print callback, void * arg);
+void esh_register_print(esh_t * esh, esh_cb_print callback, void * arg);
 
 /**
  * Register a callback to notify about overflow. Optional; esh has an internal
  * overflow handler. To reset to that, set the handler to NULL.
  * @param arg - arbitrary argument to pass to the callback
  */
-void esh_register_overflow_callback(esh_t * esh, esh_overflow overflow, void * arg);
+void esh_register_overflow(
+        esh_t * esh,
+        esh_cb_overflow overflow,
+        void * arg);
 #endif
 
 /**
- * Pass in a character that was received.
+ * -----------------------------------------------------------------------------
+ * 4.3. Advanced functions
  */
-void esh_rx(esh_t * esh, char c);
 
 /**
  * Set the location of the history buffer, if ESH_HIST_ALLOC is defined and
  * set to MANUAL. If ESH_HIST_ALLOC is not defined or not set to MANUAL, this
  * is a no-op.
  */
-void esh_set_histbuf(esh_t * esh, char * buffer);
+void esh_set_histbuf(
+        esh_t * esh,
+        char *  buffer);
 
 #endif // ESH_H
