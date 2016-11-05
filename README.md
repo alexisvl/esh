@@ -6,8 +6,9 @@ small enough to be used for (and intended for) debug UART consoles on
 microcontrollers.
 
 This readme describes esh and how to try it out. If you think you'd like to
-use it, see the [compiling guide](COMPILING.md) for information on how to set
-it up and integrate it into your project.
+use it, see the guides in the source for informations on how to set it up and
+integrate it into your project: [C header](esh.h),
+[Rust library](esh_rust/src/esh/lib.rs).
 
 Demo
 ====
@@ -44,5 +45,4 @@ History (optional)
 If compiled in, esh supports history, allowing the use of the up/down arrow keys
 to browse previously entered commands and edit/re-issue them. A ring buffer is
 used to store a fixed number of characters, so more commands can be remembered
-if they're shorter. See the [compiling guide](COMPILING.md) for information on
-how to set it up.
+if they're shorter.
