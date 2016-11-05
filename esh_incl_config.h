@@ -30,4 +30,8 @@
 
 #include "esh_config.h"
 
+#ifdef ESH_RUST
+#define ESH_STATIC_CALLBACKS
+#endif
+
 #endif // ESH_INCL_CONFIG_H

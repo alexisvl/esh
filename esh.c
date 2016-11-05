@@ -45,7 +45,6 @@ static void free_last_allocated(esh_t * esh);
 static void do_print_callback(esh_t * esh, char c);
 static void do_command(esh_t * esh, int argc, char ** argv);
 static void do_overflow_callback(esh_t * esh, char const * buffer);
-static void internal_overflow(esh_t * esh, char const * buffer, void * arg);
 static bool command_is_nop(esh_t * esh);
 static void execute_command(esh_t * esh);
 static void handle_char(esh_t * esh, char c);
@@ -55,6 +54,8 @@ static void ins_del(esh_t * esh, char c);
 static void term_cursor_move(esh_t * esh, int n);
 static void cursor_move(esh_t * esh, int n);
 
+void esh_default_overflow(esh_t * esh, char const * buffer, void * arg);
+
 #ifdef ESH_STATIC_CALLBACKS
 extern void ESH_PRINT_CALLBACK(esh_t * esh, char c, void * arg);
 extern void ESH_COMMAND_CALLBACK(
@@ -63,24 +64,21 @@ __attribute__((weak))
 void ESH_OVERFLOW_CALLBACK(esh_t * esh, char const * buffer, void * arg)
 {
     (void) arg;
-    internal_overflow(esh, buffer, arg);
+    esh_default_overflow(esh, buffer, arg);
 }
 #else
-// API WARNING: This function is separately declared in lib.rs
 void esh_register_command(esh_t * esh, esh_cb_command callback)
 {
     esh->cb_command = callback;
 }
 
 
-// API WARNING: This function is separately declared in lib.rs
 void esh_register_print(esh_t * esh, esh_cb_print callback)
 {
     esh->print = callback;
 }
 
 
-// API WARNING: This function is separately declared in lib.rs
 void esh_register_overflow(esh_t * esh, esh_cb_overflow overflow)
 {
     esh->overflow = (overflow ? overflow : &internal_overflow);
@@ -192,7 +190,7 @@ esh_t * esh_init(void)
 
     memset(esh, 0, sizeof(*esh));
 #ifndef ESH_STATIC_CALLBACKS
-    esh->overflow = internal_overflow;
+    esh->overflow = &esh_default_overflow;
 #endif
 
     if (esh_hist_init(esh)) {
@@ -408,7 +406,8 @@ void esh_print_prompt(esh_t * esh)
 /**
  * Default overflow callback. This just prints a message.
  */
-static void internal_overflow(esh_t * esh, char const * buffer, void * arg)
+// API WARNING: This function is separately declared in lib.rs
+void esh_default_overflow(esh_t * esh, char const * buffer, void * arg)
 {
     (void) buffer;
     (void) arg;

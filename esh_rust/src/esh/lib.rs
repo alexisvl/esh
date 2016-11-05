@@ -153,27 +153,15 @@ use core::slice;
 use core::str;
 
 pub enum Esh {}
-enum Void {}
+pub enum Void {}
 
 extern "C" {
     fn esh_init() -> *mut Esh;
-    fn esh_register_command(
-        esh: *mut Esh,
-        cb: extern fn(
-            esh: *mut Esh,
-            argc: i32,
-            argv: *mut *mut u8,
-            arg: *mut Void));
-    fn esh_register_print(
-        esh: *mut Esh,
-        cb: extern "C" fn(esh: *mut Esh, c: u8, arg: *mut Void));
-    fn esh_register_overflow(
-        esh: *mut Esh,
-        cb: extern "C" fn(*mut Esh, *const u8, *mut Void));
     fn esh_set_command_arg(esh: *mut Esh, arg: *mut Void);
     fn esh_set_print_arg(esh: *mut Esh, arg: *mut Void);
     fn esh_set_overflow_arg(esh: *mut Esh, arg: *mut Void);
     fn esh_rx(esh: *mut Esh, c: u8);
+    fn esh_default_overflow(esh: *mut Esh, buf: *const u8, arg: *mut Void);
     fn esh_get_slice_size() -> usize;
     fn strlen(s: *const u8) -> usize;
 }
@@ -253,7 +241,6 @@ impl Esh {
         let fp = cb as *mut Void;
         // Safe: C API function is taking a known valid reference as a pointer
         unsafe {
-            esh_register_print(self, print_callback_wrapper);
             esh_set_print_arg(self, fp);
         }
     }
@@ -270,7 +257,6 @@ impl Esh {
         let fp = cb as *mut Void;
         // Safe: C API function is taking a known valid reference as a pointer
         unsafe {
-            esh_register_command(self, command_callback_wrapper);
             esh_set_command_arg(self, fp);
         }
     }
@@ -288,7 +274,6 @@ impl Esh {
         let fp = cb as *mut Void;
         // Safe: C API function is taking a known valid reference as a pointer
         unsafe {
-            esh_register_overflow(self, overflow_callback_wrapper);
             esh_set_overflow_arg(self, fp);
         }
     }
@@ -331,47 +316,61 @@ unsafe fn map_argv_to_slice<'a>(argv: *mut *mut u8, argc: i32) ->&'a[&'a str]
     slice::from_raw_parts(as_slices, argc as usize)
 }
 
-extern "C" fn command_callback_wrapper(
-        esh: *mut Esh, argc: i32, argv: *mut *mut u8, arg: *mut Void) {
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn ESH_COMMAND_CALLBACK(
+        esh: *mut Esh, argc: i32, argv: *mut *mut u8, arg: *mut Void)
+{
+    if arg != ptr::null_mut() {
+        // Safe: `arg` came from us originally, transmuted from the same type
+        let func: fn(&Esh, &[&str]) = unsafe{mem::transmute(arg)};
 
-    // Safe: `arg` came from us originally, transmuted from the same type
-    let func: fn(&Esh, &[&str]) = unsafe{mem::transmute(arg)};
+        // Safe: this poisons argv, but we won't use argv again
+        let argv_slices = unsafe{map_argv_to_slice(argv, argc)};
 
-    // Safe: this poisons argv, but we won't use argv again
-    let argv_slices = unsafe{map_argv_to_slice(argv, argc)};
+        // Safe: `esh` came from us originally, known to be a good reference
+        let esh_self = unsafe{&*esh};
 
-    // Safe: `esh` came from us originally, known to be a good reference
-    let esh_self = unsafe{&*esh};
-
-    func(esh_self, argv_slices);
+        func(esh_self, argv_slices);
+    }
 }
 
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn ESH_OVERFLOW_CALLBACK(
+        esh: *mut Esh, buf: *const u8, arg: *mut Void)
+{
+    if arg != ptr::null_mut() {
+        // Safe: `arg` came from us originally, transmuted from the same type
+        let func: fn(&Esh, &[u8]) = unsafe{mem::transmute(arg)};
 
-extern "C" fn overflow_callback_wrapper(
-        esh: *mut Esh, buf: *const u8, arg: *mut Void) {
+        // Safe: esh guarantees this will be a valid, NUL-terminated string
+        let i = unsafe{strlen(buf)};
 
-    // Safe: `arg` came from us originally, transmuted from the same type
-    let func: fn(&Esh, &[u8]) = unsafe{mem::transmute(arg)};
+        // Safe: we just checked length
+        let buf_slice = unsafe{slice::from_raw_parts(buf, i)};
 
-    // Safe: esh guarantees this will be a valid, NUL-terminated string
-    let i = unsafe{strlen(buf)};
+        // Safe: `esh` came from us originally, known to be a good reference
+        let esh_self = unsafe{&*esh};
 
-    // Safe: we just checked length
-    let buf_slice = unsafe{slice::from_raw_parts(buf, i)};
-
-    // Safe: `esh` came from us originally, known to be a good reference
-    let esh_self = unsafe{&*esh};
-
-    func(esh_self, buf_slice);
+        func(esh_self, buf_slice);
+    } else {
+        // Safe: passing known-good pointers
+        unsafe{esh_default_overflow(esh, buf, arg)};
+    }
 }
 
-extern "C" fn print_callback_wrapper(esh: *mut Esh, c: u8, arg: *mut Void) {
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn ESH_PRINT_CALLBACK(esh: *mut Esh, c: u8, arg: *mut Void)
+{
+    if arg != ptr::null_mut() {
+        // Safe: `arg` came from us originally, transmuted from the same type
+        let func: fn(&Esh, char) = unsafe{mem::transmute(arg)};
 
-    // Safe: `arg` came from us originally, transmuted from the same type
-    let func: fn(&Esh, char) = unsafe{mem::transmute(arg)};
+        // Safe: `esh` came from us originally, known to be a good reference
+        let esh_self = unsafe{&*esh};
 
-    // Safe: `esh` came from us originally, known to be a good reference
-    let esh_self = unsafe{&*esh};
-
-    func(esh_self, c as char);
+        func(esh_self, c as char);
+    }
 }
