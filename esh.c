@@ -66,35 +66,49 @@ void ESH_OVERFLOW_CALLBACK(esh_t * esh, char const * buffer, void * arg)
     internal_overflow(esh, buffer, arg);
 }
 #else
-void esh_register_command(esh_t * esh, esh_cb_command callback, void * arg)
+// API WARNING: This function is separately declared in lib.rs
+void esh_register_command(esh_t * esh, esh_cb_command callback)
 {
     esh->cb_command = callback;
-    esh->cb_command_arg = arg;
 }
 
 
-void esh_register_print(esh_t * esh, esh_cb_print callback, void * arg)
+// API WARNING: This function is separately declared in lib.rs
+void esh_register_print(esh_t * esh, esh_cb_print callback)
 {
     esh->print = callback;
-    esh->cb_print_arg = arg;
 }
 
 
-void esh_register_overflow(
-        esh_t * esh,
-        esh_cb_overflow overflow,
-        void * arg)
+// API WARNING: This function is separately declared in lib.rs
+void esh_register_overflow(esh_t * esh, esh_cb_overflow overflow)
 {
     esh->overflow = (overflow ? overflow : &internal_overflow);
-    esh->cb_overflow_arg = arg;
 }
 #endif
 
+// API WARNING: This function is separately declared in lib.rs
+void esh_set_command_arg(esh_t * esh, void * arg)
+{
+    esh->cb_command_arg = arg;
+}
+
+// API WARNING: This function is separately declared in lib.rs
+void esh_set_print_arg(esh_t * esh, void * arg)
+{
+    esh->cb_print_arg = arg;
+}
+
+// API WARNING: This function is separately declared in lib.rs
+void esh_set_overflow_arg(esh_t * esh, void * arg)
+{
+    esh->cb_overflow_arg = arg;
+}
 
 static void do_print_callback(esh_t * esh, char c)
 {
 #ifdef ESH_STATIC_CALLBACKS
-    ESH_PRINT_CALLBACK(esh, c, NULL);
+    ESH_PRINT_CALLBACK(esh, c, esh->cb_print_arg);
 #else
     esh->print(esh, c, esh->cb_print_arg);
 #endif
@@ -104,7 +118,7 @@ static void do_print_callback(esh_t * esh, char c)
 static void do_command(esh_t * esh, int argc, char ** argv)
 {
 #ifdef ESH_STATIC_CALLBACKS
-    ESH_COMMAND_CALLBACK(esh, argc, argv, NULL);
+    ESH_COMMAND_CALLBACK(esh, argc, argv, esh->cb_command_arg);
 #else
     esh->cb_command(esh, argc, argv, esh->cb_command_arg);
 #endif
@@ -114,7 +128,7 @@ static void do_command(esh_t * esh, int argc, char ** argv)
 static void do_overflow_callback(esh_t * esh, char const * buffer)
 {
 #ifdef ESH_STATIC_CALLBACKS
-    ESH_OVERFLOW_CALLBACK(esh, buffer, NULL);
+    ESH_OVERFLOW_CALLBACK(esh, buffer, esh->cb_overflow_arg);
 #else
     esh->overflow(esh, buffer, esh->cb_overflow_arg);
 #endif
@@ -171,6 +185,7 @@ static void free_last_allocated(esh_t *esh)
 }
 
 
+// API WARNING: This function is separately declared in lib.rs
 esh_t * esh_init(void)
 {
     esh_t * esh = allocate_esh();
@@ -189,6 +204,7 @@ esh_t * esh_init(void)
 }
 
 
+// API WARNING: This function is separately declared in lib.rs
 void esh_rx(esh_t * esh, char c)
 {
     if (esh->flags & (IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE)) {
@@ -427,6 +443,7 @@ void esh_restore(esh_t * esh)
 
 
 #ifdef ESH_RUST
+// API WARNING: This function is separately declared in lib.rs
 size_t esh_get_slice_size(void)
 {
     return sizeof (struct char_slice);

@@ -46,8 +46,8 @@ int main(int argc, char ** argv)
     (void) argv;
 
     esh_t *esh = esh_init();
-    esh_register_command(esh, esh_command_cb, NULL);
-    esh_register_print(esh, esh_print_cb, NULL);
+    esh_register_command(esh, esh_command_cb);
+    esh_register_print(esh, esh_print_cb);
 
     if (!isatty(STDIN_FILENO)) {
         fprintf(stderr, "%s\n", "esh demo must run on a tty");

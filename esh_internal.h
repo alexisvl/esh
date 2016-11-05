@@ -82,10 +82,10 @@ typedef struct esh {
     esh_cb_command cb_command;
     esh_cb_print print;
     esh_cb_overflow overflow;
+#endif
     void *cb_command_arg;
     void *cb_print_arg;
     void *cb_overflow_arg;
-#endif
 } esh_t;
 
 /**

@@ -159,16 +159,20 @@ extern "C" {
     fn esh_init() -> *mut Esh;
     fn esh_register_command(
         esh: *mut Esh,
-        cb: extern fn(esh: *mut Esh, argc: i32, argv: *mut *mut u8, arg: *mut Void),
-        arg: *mut Void);
+        cb: extern fn(
+            esh: *mut Esh,
+            argc: i32,
+            argv: *mut *mut u8,
+            arg: *mut Void));
     fn esh_register_print(
         esh: *mut Esh,
-        cb: extern "C" fn(esh: *mut Esh, c: u8, arg: *mut Void),
-        arg: *mut Void);
+        cb: extern "C" fn(esh: *mut Esh, c: u8, arg: *mut Void));
     fn esh_register_overflow(
         esh: *mut Esh,
-        cb: extern "C" fn(*mut Esh, *const u8, *mut Void),
-        arg: *mut Void);
+        cb: extern "C" fn(*mut Esh, *const u8, *mut Void));
+    fn esh_set_command_arg(esh: *mut Esh, arg: *mut Void);
+    fn esh_set_print_arg(esh: *mut Esh, arg: *mut Void);
+    fn esh_set_overflow_arg(esh: *mut Esh, arg: *mut Void);
     fn esh_rx(esh: *mut Esh, c: u8);
     fn esh_get_slice_size() -> usize;
     fn strlen(s: *const u8) -> usize;
@@ -249,7 +253,8 @@ impl Esh {
         let fp = cb as *mut Void;
         // Safe: C API function is taking a known valid reference as a pointer
         unsafe {
-            esh_register_print(self, print_callback_wrapper, fp);
+            esh_register_print(self, print_callback_wrapper);
+            esh_set_print_arg(self, fp);
         }
     }
 
@@ -265,7 +270,8 @@ impl Esh {
         let fp = cb as *mut Void;
         // Safe: C API function is taking a known valid reference as a pointer
         unsafe {
-            esh_register_command(self, command_callback_wrapper, fp);
+            esh_register_command(self, command_callback_wrapper);
+            esh_set_command_arg(self, fp);
         }
     }
 
@@ -282,7 +288,8 @@ impl Esh {
         let fp = cb as *mut Void;
         // Safe: C API function is taking a known valid reference as a pointer
         unsafe {
-            esh_register_overflow(self, overflow_callback_wrapper, fp);
+            esh_register_overflow(self, overflow_callback_wrapper);
+            esh_set_overflow_arg(self, fp);
         }
     }
 }

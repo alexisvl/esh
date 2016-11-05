@@ -208,13 +208,15 @@ void esh_rx(
 /**
  * -----------------------------------------------------------------------------
  * 4.2. Callback types and registration functions
+ *
+ * These only exist if ESH_STATIC_CALLBACKS is not defined.
  */
 
 /**
  * Callback to handle commands.
  * @param argc - number of arguments, including the command name
  * @param argv - arguments
- * @param arg - arbitrary argument passed to esh_register_command()
+ * @param arg - arbitrary argument passed to esh_set_command_arg()
  */
 typedef void (*esh_cb_command)(
         esh_t * esh,
@@ -226,7 +228,7 @@ typedef void (*esh_cb_command)(
  * Callback to print a character.
  * @param esh - the esh instance calling
  * @param c - the character to print
- * @param arg - arbitrary argument passed to esh_register_print()
+ * @param arg - arbitrary argument passed to esh_set_print_arg()
  */
 typedef void (*esh_cb_print)(
         esh_t * esh,
@@ -237,7 +239,7 @@ typedef void (*esh_cb_print)(
  * Callback to notify about overflow.
  * @param esh - the esh instance calling
  * @param buffer - the internal buffer, NUL-terminated
- * @param arg - arbitrary argument passed to esh_register_overflow_callback()
+ * @param arg - arbitrary argument passed to esh_set_overflow_arg()
  */
 typedef void (*esh_cb_overflow)(
         esh_t *         esh,
@@ -246,28 +248,25 @@ typedef void (*esh_cb_overflow)(
 
 /**
  * Register a callback to execute a command.
- * @param arg - arbitrary argument to pass to the callback
  */
 void esh_register_command(
         esh_t *         esh,
-        esh_cb_command  callback,
-        void *          arg);
+        esh_cb_command  callback);
 
 /**
  * Register a callback to print a character.
- * @param arg - arbitrary argument to pass to the callback
  */
-void esh_register_print(esh_t * esh, esh_cb_print callback, void * arg);
+void esh_register_print(
+        esh_t *         esh,
+        esh_cb_print    callback);
 
 /**
  * Register a callback to notify about overflow. Optional; esh has an internal
  * overflow handler. To reset to that, set the handler to NULL.
- * @param arg - arbitrary argument to pass to the callback
  */
 void esh_register_overflow(
         esh_t * esh,
-        esh_cb_overflow overflow,
-        void * arg);
+        esh_cb_overflow overflow);
 #endif
 
 /**
@@ -283,5 +282,26 @@ void esh_register_overflow(
 void esh_set_histbuf(
         esh_t * esh,
         char *  buffer);
+
+/**
+ * Set an argument to be given to the command callback. Default is NULL.
+ */
+void esh_set_command_arg(
+        esh_t * esh,
+        void *  arg);
+
+/**
+ * Set an argument to be given to the print callback. Default is NULL.
+ */
+void esh_set_print_arg(
+        esh_t * esh,
+        void *  arg);
+
+/**
+ * Set an argument to be given to the overflow callback. Default is NULL.
+ */
+void esh_set_overflow_arg(
+        esh_t * esh,
+        void *  arg);
 
 #endif // ESH_H
