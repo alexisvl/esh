@@ -81,7 +81,7 @@ void esh_register_print(esh_t * esh, esh_cb_print callback)
 
 void esh_register_overflow(esh_t * esh, esh_cb_overflow overflow)
 {
-    esh->overflow = (overflow ? overflow : &internal_overflow);
+    esh->overflow = (overflow ? overflow : &esh_default_overflow);
 }
 #endif
 
