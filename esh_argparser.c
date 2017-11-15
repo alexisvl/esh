@@ -62,7 +62,7 @@ int esh_parse_args(esh_t * esh)
     size_t dest = 0;
 
     for (size_t i = 0; i < esh->cnt; ++i) {
-        if (isspace(esh->buffer[i])) {
+        if (esh->buffer[i] == ' ') {
             last_was_space = true;
             esh->buffer[dest] = 0;
             ++dest;

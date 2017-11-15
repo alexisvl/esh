@@ -214,7 +214,7 @@ void esh_rx(esh_t * esh, char c)
         // Verify the c is valid non-extended ASCII (and thus also valid
         // UTF-8, for Rust), regardless of whether this platform's isprint()
         // accepts things above 0x7f.
-        if (isprint(c) && (unsigned char) c <= 0x7f) {
+        if (c >= 0x20 && (unsigned char) c <= 0x7f) {
             handle_char(esh, c);
         } else {
             handle_ctrl(esh, c);
@@ -358,7 +358,7 @@ wmove:
 static bool command_is_nop(esh_t * esh)
 {
     for (size_t i = 0; esh->buffer[i]; ++i) {
-        if (!isspace(esh->buffer[i])) {
+        if (esh->buffer[i] != ' ') {
             return false;
         }
     }
@@ -493,7 +493,8 @@ static void cursor_move(esh_t * esh, int n)
  * Move the esh cursor backwards or forwards one word. This applies history
  * substitution, moves the terminal cursor, and moves the insertion point.
  *
- * @param dir - move forward if positive or negative if negative.
+ * @param dir - move forward if +1 or negative if -1. All other numbers produce
+ *              undefined behavior.
  */
 static void word_move(esh_t * esh, int dir)
 {
@@ -503,19 +504,12 @@ static void word_move(esh_t * esh, int dir)
     if (dir == 0) {
         return;
     } else if (dir < 0) {
-        while (ins > 0 && isspace(esh->buffer[ins - 1])) {
-            --ins;
-        }
-        while (ins > 0 && !isspace(esh->buffer[ins - 1])) {
-            --ins;
-        }
+        for (; ins > 0 && esh->buffer[ins - 1] == ' '; --ins);
+        for (; ins > 0 && esh->buffer[ins - 1] != ' '; --ins);
     } else {
-        while (ins < esh->cnt && !isspace(esh->buffer[ins])) {
-            ++ins;
-        }
-        while (ins < esh->cnt && isspace(esh->buffer[ins])) {
-            ++ins;
-        }
+        const size_t cnt = esh->cnt;
+        for (; ins < cnt && esh->buffer[ins] != ' '; ++ins);
+        for (; ins < cnt && esh->buffer[ins] == ' '; ++ins);
     }
 
     term_cursor_move(esh, ins - esh->ins);
