@@ -49,6 +49,7 @@ static void handle_ctrl(esh_t * esh, char c);
 static void ins_del(esh_t * esh, char c);
 static void term_cursor_move(esh_t * esh, int n);
 static void cursor_move(esh_t * esh, int n);
+static void word_move(esh_t * esh, int dir);
 
 void esh_default_overflow(esh_t * esh, char const * buffer, void * arg);
 
@@ -333,11 +334,20 @@ static void handle_esc(esh_t * esh, char esc)
     case ESCCHAR_END:
         cdelta = esh->cnt - esh->ins;
         goto cmove;
+    case ESCCHAR_CTRLLEFT:
+        cdelta = -1;
+        goto wmove;
+    case ESCCHAR_CTRLRIGHT:
+        cdelta = 1;
+        goto wmove;
     }
 
     return;
 cmove: // micro-optimization, yo!
     cursor_move(esh, cdelta);
+    return;
+wmove:
+    word_move(esh, cdelta);
 }
 
 
@@ -476,6 +486,40 @@ static void cursor_move(esh_t * esh, int n)
 
     term_cursor_move(esh, n);
     esh->ins += n;
+}
+
+
+/**
+ * Move the esh cursor backwards or forwards one word. This applies history
+ * substitution, moves the terminal cursor, and moves the insertion point.
+ *
+ * @param dir - move forward if positive or negative if negative.
+ */
+static void word_move(esh_t * esh, int dir)
+{
+    size_t ins = esh->ins;
+    esh_hist_substitute(esh);
+
+    if (dir == 0) {
+        return;
+    } else if (dir < 0) {
+        while (ins > 0 && isspace(esh->buffer[ins - 1])) {
+            --ins;
+        }
+        while (ins > 0 && !isspace(esh->buffer[ins - 1])) {
+            --ins;
+        }
+    } else {
+        while (ins < esh->cnt && !isspace(esh->buffer[ins])) {
+            ++ins;
+        }
+        while (ins < esh->cnt && isspace(esh->buffer[ins])) {
+            ++ins;
+        }
+    }
+
+    term_cursor_move(esh, ins - esh->ins);
+    esh->ins = ins;
 }
 
 

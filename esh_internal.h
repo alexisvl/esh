@@ -154,5 +154,7 @@ size_t esh_get_slice_size(void);
 #define ESCCHAR_LEFT    'D'
 #define ESCCHAR_HOME    'H'
 #define ESCCHAR_END     'F'
+#define ESCCHAR_CTRLLEFT    'd'
+#define ESCCHAR_CTRLRIGHT   'c'
 
 #endif // ESH_INTERNAL_H

@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-CFLAGS = -Wall -Wextra -Werror -pedantic -std=c11 -Og -ggdb -I .. -iquote .
+CFLAGS = -Wall -Wextra -Werror -pedantic -std=c11 -O2 -ggdb -I .. -iquote .
 OBJECTS = main.o ../esh.o ../esh_hist.o ../esh_argparser.o
 OUTPUT = demo
 
