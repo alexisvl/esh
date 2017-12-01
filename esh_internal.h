@@ -104,9 +104,20 @@ bool esh_putc(esh_t * esh, char c);
 
 /**
  * @internal
- * Print a string, using __memx on AVR.
+ * Print a string located in RAM.
  */
-bool esh_puts(esh_t * esh, char const AVR_ONLY(__memx) * s);
+bool esh_puts(esh_t * esh, char const * s);
+
+/**
+ * @internal
+ * Print a string located in flash. On all but AVR this is an alias for
+ * esh_puts().
+ */
+#ifdef __AVR_ARCH__
+bool esh_puts_flash(esh_t * esh, char const __flash * s);
+#else
+#define esh_puts_flash esh_puts
+#endif
 
 /**
  * Print the prompt string

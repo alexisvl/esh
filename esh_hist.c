@@ -183,7 +183,7 @@ bool esh_hist_add(esh_t * esh, char const * s)
 void esh_hist_print(esh_t * esh, int offset)
 {
     // Clear the line
-    esh_puts(esh, FSTR(ESC_ERASE_LINE "\r"));
+    esh_puts_flash(esh, FSTR(ESC_ERASE_LINE "\r"));
 
     esh_print_prompt(esh);
 

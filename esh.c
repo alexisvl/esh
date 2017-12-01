@@ -258,7 +258,7 @@ static void handle_ctrl(esh_t * esh, char c)
             esh->flags |= IN_ESCAPE;
             break;
         case 3:  // ^C
-            esh_puts(esh, FSTR("^C\n"));
+            esh_puts_flash(esh, FSTR("^C\n"));
             esh_print_prompt(esh);
             esh->cnt = esh->ins = 0;
             break;
@@ -405,7 +405,7 @@ static void execute_command(esh_t * esh)
 
 void esh_print_prompt(esh_t * esh)
 {
-    esh_puts(esh, FSTR(ESH_PROMPT));
+    esh_puts_flash(esh, FSTR(ESH_PROMPT));
 }
 
 
@@ -417,7 +417,7 @@ void esh_default_overflow(esh_t * esh, char const * buffer, void * arg)
 {
     (void) buffer;
     (void) arg;
-    esh_puts(esh, FSTR("\nesh: command buffer overflow\n"));
+    esh_puts_flash(esh, FSTR("\nesh: command buffer overflow\n"));
 }
 
 
@@ -428,18 +428,33 @@ bool esh_putc(esh_t * esh, char c)
 }
 
 
-bool esh_puts(esh_t * esh, char const AVR_ONLY(__memx) * s)
+bool esh_puts(esh_t * esh, char const * s)
 {
-    for (size_t i = 0; s[i]; ++i) {
-        esh_putc(esh, s[i]);
+    char c;
+
+    while ((c = *s++)) {
+        esh_putc(esh, c);
     }
     return false;
 }
 
 
+#ifdef __AVR_ARCH__
+bool esh_puts_flash(esh_t * esh, char const __flash * s)
+{
+    char c;
+
+    while ((c = *s++)) {
+        esh_putc(esh, c);
+    }
+    return false;
+}
+#endif // __AVR_ARCH__
+
+
 void esh_restore(esh_t * esh)
 {
-    esh_puts(esh, FSTR(ESC_ERASE_LINE "\r")); // Clear line
+    esh_puts_flash(esh, FSTR(ESC_ERASE_LINE "\r")); // Clear line
     esh_print_prompt(esh);
     esh->buffer[esh->cnt] = 0;
     esh_puts(esh, esh->buffer);
@@ -462,11 +477,11 @@ size_t esh_get_slice_size(void)
 static void term_cursor_move(esh_t * esh, int n)
 {
     for ( ; n > 0; --n) {
-        esh_puts(esh, FSTR(ESC_CURSOR_RIGHT));
+        esh_puts_flash(esh, FSTR(ESC_CURSOR_RIGHT));
     }
 
     for ( ; n < 0; ++n) {
-        esh_puts(esh, FSTR(ESC_CURSOR_LEFT));
+        esh_puts_flash(esh, FSTR(ESC_CURSOR_LEFT));
     }
 }
 
@@ -540,7 +555,7 @@ static void ins_del(esh_t * esh, char c)
     if (move) {
         esh_restore(esh);
     } else if (!c) {
-        esh_puts(esh, FSTR("\b \b"));
+        esh_puts_flash(esh, FSTR("\b \b"));
     } else {
         esh_putc(esh, c);
     }
