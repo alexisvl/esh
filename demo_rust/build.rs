@@ -2,7 +2,7 @@ extern crate gcc;
 
 fn main()
 {
-    gcc::Config::new()
+    gcc::Build::new()
         .file("../esh.c")
         .file("../esh_hist.c")
         .file("../esh_argparser.c")

@@ -80,7 +80,7 @@ fn set_terminal_raw()
 
 fn main()
 {
-    let mut esh = Esh::init().unwrap();
+    let esh = Esh::init().unwrap();
     esh.register_command(esh_command_cb);
     esh.register_print(esh_print_cb);
 
