@@ -24,6 +24,9 @@
 #ifndef ESH_INCL_CONFIG_H
 #define ESH_INCL_CONFIG_H
 
+#define STATIC 1
+#define MANUAL 2
+#define MALLOC 3
 #include "esh_config.h"
 
 #ifdef ESH_RUST

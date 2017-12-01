@@ -168,4 +168,12 @@ size_t esh_get_slice_size(void);
 #define ESCCHAR_CTRLLEFT    'd'
 #define ESCCHAR_CTRLRIGHT   'c'
 
+#if ESH_ALLOC == STATIC
+extern esh_t g_esh_struct;
+#define ESH_INSTANCE (&g_esh_struct)
+#else
+#define ESH_INSTANCE esh
+#define ESH_INSTANCE_PASS esh
+#endif // ESH_ALLOC
+
 #endif // ESH_INTERNAL_H

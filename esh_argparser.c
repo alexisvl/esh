@@ -40,15 +40,16 @@
  */
 static void consume_quoted(esh_t * esh, size_t *src_i, size_t *dest_i)
 {
-    char quote = esh->buffer[*src_i];
+    (void) esh;
+    char quote = ESH_INSTANCE->buffer[*src_i];
 
-    for (++*src_i; *src_i < esh->cnt; ++*src_i) {
-        char c = esh->buffer[*src_i];
+    for (++*src_i; *src_i < ESH_INSTANCE->cnt; ++*src_i) {
+        char c = ESH_INSTANCE->buffer[*src_i];
         if (c == quote) {
             // End of quoted string
             break;
         } else {
-            DEST(esh)[*dest_i] = c;
+            DEST(ESH_INSTANCE)[*dest_i] = c;
             ++*dest_i;
         }
     }
@@ -57,32 +58,33 @@ static void consume_quoted(esh_t * esh, size_t *src_i, size_t *dest_i)
 
 int esh_parse_args(esh_t * esh)
 {
+    (void) esh;
     int argc = 0;
     bool last_was_space = true;
     size_t dest = 0;
 
-    for (size_t i = 0; i < esh->cnt; ++i) {
-        if (esh->buffer[i] == ' ') {
+    for (size_t i = 0; i < ESH_INSTANCE->cnt; ++i) {
+        if (ESH_INSTANCE->buffer[i] == ' ') {
             last_was_space = true;
-            esh->buffer[dest] = 0;
+            ESH_INSTANCE->buffer[dest] = 0;
             ++dest;
         } else {
             if (last_was_space) {
                 if (argc < ESH_ARGC_MAX) {
-                    esh->argv[argc] = &esh->buffer[dest];
+                    ESH_INSTANCE->argv[argc] = &ESH_INSTANCE->buffer[dest];
                 }
                 ++argc;
             }
-            if (esh->buffer[i] == '\'' || esh->buffer[i] == '\"') {
-                consume_quoted(esh, &i, &dest);
+            if (ESH_INSTANCE->buffer[i] == '\'' || ESH_INSTANCE->buffer[i] == '\"') {
+                consume_quoted(ESH_INSTANCE, &i, &dest);
             } else {
-                esh->buffer[dest] = esh->buffer[i];
+                ESH_INSTANCE->buffer[dest] = ESH_INSTANCE->buffer[i];
                 ++dest;
             }
             last_was_space = false;
         }
     }
-    esh->buffer[dest] = 0;
-    esh->buffer[ESH_BUFFER_LEN] = 0;
+    ESH_INSTANCE->buffer[dest] = 0;
+    ESH_INSTANCE->buffer[ESH_BUFFER_LEN] = 0;
     return argc;
 }

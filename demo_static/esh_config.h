@@ -6,5 +6,4 @@
 #define ESH_HIST_LEN 4096
 
 #define ESH_ALLOC STATIC
-#define ESH_INSTANCES 1
 #define ESH_STATIC_CALLBACKS

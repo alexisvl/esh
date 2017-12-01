@@ -62,7 +62,6 @@
  *     #define ESH_BUFFER_LEN   200         // Maximum length of a command
  *     #define ESH_ARGC_MAX     10          // Maximum argument count
  *     #define ESH_ALLOC        STATIC      // How to allocate esh_t (or MALLOC)
- *     #define ESH_INSTANCES    1           // Number of instances, if ^=STATIC
  *
  * Then, to use esh, include `esh.h`, and initialize an esh instance with:
  *
@@ -178,15 +177,14 @@ struct esh;
  * any other functions.
  *
  * See ESH_ALLOC in esh_config.h - this should be STATIC or MALLOC.
- * If STATIC, ESH_INSTANCES must be defined to the maximum number of
- * instances.
+ * If STATIC, only a single instance can be used. esh_init() will return a
+ * pointer to it on the first call, and all subsequent calls will return
+ * NULL.
  *
- * @return esh instance, or NULL on failure. Failure can only happen in the
- * following cases:
+ * @return esh instance, or NULL in the following cases:
  *  - using malloc to allocate either the esh struct itself or the history
- *      buffer, and malloc returns NULL
- *  - using static allocation and you tried to initialize more than
- *      ESH_INSTANCES.
+ *      buffer, and malloc returns NULL.
+ *  - using static allocation and esh has already been initialized.
  *  - whichever allocation method was chosen for ESH_HIST_ALLOC, if any,
  *      failed.
  */

@@ -67,7 +67,6 @@
  *     #define ESH_BUFFER_LEN   200         // Maximum length of a command
  *     #define ESH_ARGC_MAX     10          // Maximum argument count
  *     #define ESH_ALLOC        STATIC      // How to allocate esh_t (or MALLOC)
- *     #define ESH_INSTANCES    1           // Number of instances, if ^=STATIC
  *
  * Then, to use esh, use `extern crate esh`, and initialize an esh instance:
  *
@@ -180,9 +179,9 @@ impl Esh {
      * Return an initialized esh object. Must be called before any other
      * functions.
      *
-     * See `ESH_ALLOC` in `esh_config.h` - this hsould be `STATIC` or `MALLOC`.
-     * If `STATIC`, `ESH_INSTANCES` must be defined to the maximum number of
-     * instances.
+     * See `ESH_ALLOC` in `esh_config.h` - this should be `STATIC` or `MALLOC`.
+     * If `STATIC`, only a single instance can be used. init() will return it
+     * on the first call, and all subsequent calls will return None.
      *
      * Note that the reference returned always has static lifetime, even when
      * `MALLOC` is used. This is because esh has no destructor: despite being

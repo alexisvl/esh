@@ -72,14 +72,15 @@ static int modulo(int n, int modulus)
 static void for_each_char(esh_t * esh, int offset,
         bool (*callback)(esh_t * esh, char c))
 {
-    for (int i = offset; esh->hist.hist[i]; i = (i + 1) % ESH_HIST_LEN) {
+    (void) esh;
+    for (int i = offset; ESH_INSTANCE->hist.hist[i]; i = (i + 1) % ESH_HIST_LEN) {
         if (i == modulo(offset - 1, ESH_HIST_LEN)) {
             // Wrapped around and didn't encounter NUL. Stop here to prevent
             // an infinite loop.
             return;
         }
 
-        if (callback(esh, esh->hist.hist[i])) {
+        if (callback(ESH_INSTANCE, ESH_INSTANCE->hist.hist[i])) {
             return;
         }
     }
@@ -91,9 +92,10 @@ static void for_each_char(esh_t * esh, int offset,
  */
 static bool clobber_cb(esh_t * esh, char c)
 {
-    esh->buffer[esh->cnt] = c;
-    ++esh->cnt;
-    ++esh->ins;
+    (void) esh;
+    ESH_INSTANCE->buffer[ESH_INSTANCE->cnt] = c;
+    ++ESH_INSTANCE->cnt;
+    ++ESH_INSTANCE->ins;
     return false;
 }
 
@@ -106,33 +108,35 @@ static bool clobber_cb(esh_t * esh, char c)
  */
 static void clobber_buffer(esh_t * esh, int offset)
 {
+    (void) esh;
     if (offset < 0 || offset >= ESH_HIST_LEN) {
         return;
     }
 
-    esh->cnt = 0;
-    esh->ins = 0;
-    for_each_char(esh, offset, &clobber_cb);
+    ESH_INSTANCE->cnt = 0;
+    ESH_INSTANCE->ins = 0;
+    for_each_char(ESH_INSTANCE, offset, &clobber_cb);
 }
 
 
 bool esh_hist_init(esh_t * esh)
 {
+    (void) esh;
 #if ESH_HIST_ALLOC == STATIC
     static char esh_hist[ESH_HIST_LEN] = {0};
-    esh->hist.hist = &esh_hist[0];
-    init_buffer(esh->hist.hist);
+    ESH_INSTANCE->hist.hist = &esh_hist[0];
+    init_buffer(ESH_INSTANCE->hist.hist);
     return false;
 #elif ESH_HIST_ALLOC == MALLOC
-    esh->hist.hist = malloc(ESH_HIST_LEN);
-    if (esh->hist.hist) {
-        init_buffer(esh->hist.hist);
+    ESH_INSTANCE->hist.hist = malloc(ESH_HIST_LEN);
+    if (ESH_INSTANCE->hist.hist) {
+        init_buffer(ESH_INSTANCE->hist.hist);
         return false;
     } else {
         return true;
     }
 #elif ESH_HIST_ALLOC == MANUAL
-    esh->hist.hist = NULL;
+    ESH_INSTANCE->hist.hist = NULL;
     return false;
 #endif
 }
@@ -140,13 +144,14 @@ bool esh_hist_init(esh_t * esh)
 
 int esh_hist_nth(esh_t * esh, int n)
 {
-    const int start = modulo(esh->hist.tail - 1, ESH_HIST_LEN);
-    const int stop = (esh->hist.tail + 1) % ESH_HIST_LEN;
+    (void) esh;
+    const int start = modulo(ESH_INSTANCE->hist.tail - 1, ESH_HIST_LEN);
+    const int stop = (ESH_INSTANCE->hist.tail + 1) % ESH_HIST_LEN;
 
     for (int i = start; i != stop; i = modulo(i - 1, ESH_HIST_LEN)) {
-        if (n && esh->hist.hist[i] == 0) {
+        if (n && ESH_INSTANCE->hist.hist[i] == 0) {
             --n;
-        } else if (esh->hist.hist[i] == 0) {
+        } else if (ESH_INSTANCE->hist.hist[i] == 0) {
             return (i + 1) % ESH_HIST_LEN;
         }
     }
@@ -157,23 +162,24 @@ int esh_hist_nth(esh_t * esh, int n)
 
 bool esh_hist_add(esh_t * esh, char const * s)
 {
-    const int start = (esh->hist.tail + 1) % ESH_HIST_LEN;
+    (void) esh;
+    const int start = (ESH_INSTANCE->hist.tail + 1) % ESH_HIST_LEN;
 
     for (int i = start; ; i = (i + 1) % ESH_HIST_LEN)
     {
-        if (i == modulo(esh->hist.tail - 1, ESH_HIST_LEN)) {
+        if (i == modulo(ESH_INSTANCE->hist.tail - 1, ESH_HIST_LEN)) {
             // Wrapped around
-            esh->hist.tail = 0;
-            init_buffer(esh->hist.hist);
+            ESH_INSTANCE->hist.tail = 0;
+            init_buffer(ESH_INSTANCE->hist.hist);
             return true;
         }
 
-        esh->hist.hist[i] = *s;
+        ESH_INSTANCE->hist.hist[i] = *s;
 
         if (*s) {
             ++s;
         } else {
-            esh->hist.tail = i;
+            ESH_INSTANCE->hist.tail = i;
             return false;
         }
     }
@@ -182,24 +188,26 @@ bool esh_hist_add(esh_t * esh, char const * s)
 
 void esh_hist_print(esh_t * esh, int offset)
 {
+    (void) esh;
     // Clear the line
-    esh_puts_flash(esh, FSTR(ESC_ERASE_LINE "\r"));
+    esh_puts_flash(ESH_INSTANCE, FSTR(ESC_ERASE_LINE "\r"));
 
-    esh_print_prompt(esh);
+    esh_print_prompt(ESH_INSTANCE);
 
     if (offset >= 0) {
-        for_each_char(esh, offset, esh_putc);
+        for_each_char(ESH_INSTANCE, offset, esh_putc);
     }
 }
 
 
 bool esh_hist_substitute(esh_t * esh)
 {
-    if (esh->hist.idx) {
-        int offset = esh_hist_nth(esh, esh->hist.idx - 1);
-        clobber_buffer(esh, offset);
-        esh_restore(esh);
-        esh->hist.idx = 0;
+    (void) esh;
+    if (ESH_INSTANCE->hist.idx) {
+        int offset = esh_hist_nth(ESH_INSTANCE, ESH_INSTANCE->hist.idx - 1);
+        clobber_buffer(ESH_INSTANCE, offset);
+        esh_restore(ESH_INSTANCE);
+        ESH_INSTANCE->hist.idx = 0;
         return true;
     } else {
         return false;
@@ -212,8 +220,8 @@ bool esh_hist_substitute(esh_t * esh)
 
 void esh_set_histbuf(esh_t * esh, char * buffer)
 {
-    esh->hist.hist = buffer;
-    init_buffer(esh->hist.hist);
+    ESH_INSTANCE->hist.hist = buffer;
+    init_buffer(ESH_INSTANCE->hist.hist);
 }
 
 #else // ESH_HIST_ALLOC == MANUAL

@@ -17,10 +17,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#define STATIC 1
-#define MANUAL 2
-#define MALLOC 3
-
 #include <esh.h>
 #include <string.h>
 #include <ctype.h>
@@ -66,66 +62,75 @@ void ESH_OVERFLOW_CALLBACK(esh_t * esh, char const * buffer, void * arg)
 #else
 void esh_register_command(esh_t * esh, esh_cb_command callback)
 {
-    esh->cb_command = callback;
+    (void) esh;
+    ESH_INSTANCE->cb_command = callback;
 }
 
 
 void esh_register_print(esh_t * esh, esh_cb_print callback)
 {
-    esh->print = callback;
+    (void) esh;
+    ESH_INSTANCE->print = callback;
 }
 
 
 void esh_register_overflow(esh_t * esh, esh_cb_overflow overflow)
 {
-    esh->overflow = (overflow ? overflow : &esh_default_overflow);
+    (void) esh;
+    ESH_INSTANCE->overflow = (overflow ? overflow : &esh_default_overflow);
 }
 #endif
 
 // API WARNING: This function is separately declared in lib.rs
 void esh_set_command_arg(esh_t * esh, void * arg)
 {
-    esh->cb_command_arg = arg;
+    (void) esh;
+    ESH_INSTANCE->cb_command_arg = arg;
 }
 
 // API WARNING: This function is separately declared in lib.rs
 void esh_set_print_arg(esh_t * esh, void * arg)
 {
-    esh->cb_print_arg = arg;
+    (void) esh;
+    ESH_INSTANCE->cb_print_arg = arg;
 }
 
 // API WARNING: This function is separately declared in lib.rs
 void esh_set_overflow_arg(esh_t * esh, void * arg)
 {
-    esh->cb_overflow_arg = arg;
+    (void) esh;
+    ESH_INSTANCE->cb_overflow_arg = arg;
 }
 
 static void do_print_callback(esh_t * esh, char c)
 {
+    (void) esh;
 #ifdef ESH_STATIC_CALLBACKS
-    ESH_PRINT_CALLBACK(esh, c, esh->cb_print_arg);
+    ESH_PRINT_CALLBACK(ESH_INSTANCE, c, ESH_INSTANCE->cb_print_arg);
 #else
-    esh->print(esh, c, esh->cb_print_arg);
+    ESH_INSTANCE->print(ESH_INSTANCE, c, ESH_INSTANCE->cb_print_arg);
 #endif
 }
 
 
 static void do_command(esh_t * esh, int argc, char ** argv)
 {
+    (void) esh;
 #ifdef ESH_STATIC_CALLBACKS
-    ESH_COMMAND_CALLBACK(esh, argc, argv, esh->cb_command_arg);
+    ESH_COMMAND_CALLBACK(ESH_INSTANCE, argc, argv, ESH_INSTANCE->cb_command_arg);
 #else
-    esh->cb_command(esh, argc, argv, esh->cb_command_arg);
+    ESH_INSTANCE->cb_command(ESH_INSTANCE, argc, argv, ESH_INSTANCE->cb_command_arg);
 #endif
 }
 
 
 static void do_overflow_callback(esh_t * esh, char const * buffer)
 {
+    (void) esh;
 #ifdef ESH_STATIC_CALLBACKS
-    ESH_OVERFLOW_CALLBACK(esh, buffer, esh->cb_overflow_arg);
+    ESH_OVERFLOW_CALLBACK(ESH_INSTANCE, buffer, ESH_INSTANCE->cb_overflow_arg);
 #else
-    esh->overflow(esh, buffer, esh->cb_overflow_arg);
+    ESH_INSTANCE->overflow(ESH_INSTANCE, buffer, ESH_INSTANCE->cb_overflow_arg);
 #endif
 }
 
@@ -135,9 +140,9 @@ static void do_overflow_callback(esh_t * esh, char const * buffer)
  * decrement it.
  */
 #if ESH_ALLOC == STATIC
-static size_t n_allocated = 0;
+static bool g_allocated = false;
+esh_t g_esh_struct;
 #endif
-
 
 /**
  * Allocate a new esh_t, or return a new statically allocated one from the pool.
@@ -146,14 +151,11 @@ static size_t n_allocated = 0;
 static esh_t * allocate_esh(void)
 {
 #if ESH_ALLOC == STATIC
-    static esh_t instances[ESH_INSTANCES];
-
-    if (n_allocated < ESH_INSTANCES) {
-        esh_t * esh = &instances[n_allocated];
-        ++n_allocated;
-        return esh;
-    } else {
+    if (g_allocated) {
         return NULL;
+    } else {
+        g_allocated = true;
+        return &g_esh_struct;
     }
 #elif ESH_ALLOC == MALLOC
     return malloc(sizeof(esh_t));
@@ -171,9 +173,7 @@ static void free_last_allocated(esh_t *esh)
 {
 #if ESH_ALLOC == STATIC
     (void) esh;
-    if (n_allocated) {
-        --n_allocated;
-    }
+    g_allocated = false;
 #elif ESH_ALLOC == MALLOC
     free(esh);
 #endif
@@ -190,8 +190,8 @@ esh_t * esh_init(void)
     esh->overflow = &esh_default_overflow;
 #endif
 
-    if (esh_hist_init(esh)) {
-        free_last_allocated(esh);
+    if (esh_hist_init(ESH_INSTANCE)) {
+        free_last_allocated(ESH_INSTANCE);
         return NULL;
     } else {
         return esh;
@@ -202,22 +202,23 @@ esh_t * esh_init(void)
 // API WARNING: This function is separately declared in lib.rs
 void esh_rx(esh_t * esh, char c)
 {
-    if (esh->flags & (IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE)) {
-        handle_esc(esh, c);
-    } else if (esh->flags & IN_ESCAPE) {
+    (void) esh;
+    if (ESH_INSTANCE->flags & (IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE)) {
+        handle_esc(ESH_INSTANCE, c);
+    } else if (ESH_INSTANCE->flags & IN_ESCAPE) {
         if (c == '[' || c == 'O') {
-            esh->flags |= IN_BRACKET_ESCAPE;
+            ESH_INSTANCE->flags |= IN_BRACKET_ESCAPE;
         } else {
-            esh->flags &= ~(IN_ESCAPE | IN_BRACKET_ESCAPE);
+            ESH_INSTANCE->flags &= ~(IN_ESCAPE | IN_BRACKET_ESCAPE);
         }
     } else {
         // Verify the c is valid non-extended ASCII (and thus also valid
         // UTF-8, for Rust), regardless of whether this platform's isprint()
         // accepts things above 0x7f.
         if (c >= 0x20 && (unsigned char) c < 0x7f) {
-            handle_char(esh, c);
+            handle_char(ESH_INSTANCE, c);
         } else {
-            handle_ctrl(esh, c);
+            handle_ctrl(ESH_INSTANCE, c);
         }
     }
 }
@@ -229,21 +230,22 @@ void esh_rx(esh_t * esh, char c)
  */
 static void handle_char(esh_t * esh, char c)
 {
-    esh_hist_substitute(esh);
+    (void) esh;
+    esh_hist_substitute(ESH_INSTANCE);
 
-    if (esh->cnt < ESH_BUFFER_LEN) {
-        ins_del(esh, c);
+    if (ESH_INSTANCE->cnt < ESH_BUFFER_LEN) {
+        ins_del(ESH_INSTANCE, c);
     } else {
         // If we let esh->cnt keep counting past the buffer limit, it could
         // eventually wrap around. Let it sit right past the end, and make sure
         // there is a NUL terminator in the buffer (we promise the overflow
         // handler that).
-        esh->cnt = ESH_BUFFER_LEN + 1;
+        ESH_INSTANCE->cnt = ESH_BUFFER_LEN + 1;
 
         // Note that the true buffer length is actually one greater than
         // ESH_BUFFER_LEN (which is the number of characters NOT including the
         // terminator that it can hold).
-        esh->buffer[ESH_BUFFER_LEN] = 0;
+        ESH_INSTANCE->buffer[ESH_BUFFER_LEN] = 0;
     }
 }
 
@@ -253,23 +255,24 @@ static void handle_char(esh_t * esh, char c)
  */
 static void handle_ctrl(esh_t * esh, char c)
 {
+    (void) esh;
     switch (c) {
         case 27: // escape
-            esh->flags |= IN_ESCAPE;
+            ESH_INSTANCE->flags |= IN_ESCAPE;
             break;
         case 3:  // ^C
-            esh_puts_flash(esh, FSTR("^C\n"));
-            esh_print_prompt(esh);
-            esh->cnt = esh->ins = 0;
+            esh_puts_flash(ESH_INSTANCE, FSTR("^C\n"));
+            esh_print_prompt(ESH_INSTANCE);
+            ESH_INSTANCE->cnt = ESH_INSTANCE->ins = 0;
             break;
         case '\n':
-            execute_command(esh);
+            execute_command(ESH_INSTANCE);
             break;
         case 8:     // backspace
         case 127:   // delete
-            esh_hist_substitute(esh);
-            if (esh->cnt > 0 && esh->cnt <= ESH_BUFFER_LEN) {
-                ins_del(esh, 0);
+            esh_hist_substitute(ESH_INSTANCE);
+            if (ESH_INSTANCE->cnt > 0 && ESH_INSTANCE->cnt <= ESH_BUFFER_LEN) {
+                ins_del(ESH_INSTANCE, 0);
             }
             break;
         default:
@@ -284,41 +287,46 @@ static void handle_ctrl(esh_t * esh, char c)
  */
 static void handle_esc(esh_t * esh, char esc)
 {
+    (void) esh;
     int cdelta;
 
     if (esc >= '0' && esc <= '9') {
-        esh->flags |= IN_ESCAPE | IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE;
+        ESH_INSTANCE->flags
+            |= IN_ESCAPE | IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE;
         return;
     }
 
-    if (esh->flags & IN_NUMERIC_ESCAPE) {
+    if (ESH_INSTANCE->flags & IN_NUMERIC_ESCAPE) {
         // Numeric escapes can contain numbers and semicolons; they terminate
         // at letters and ~
         if (esc == '~' || isalpha(esc)) {
-            esh->flags &= ~(IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE | IN_ESCAPE);
+            ESH_INSTANCE->flags
+                &= ~(IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE | IN_ESCAPE);
         }
     } else {
-        esh->flags &= ~(IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE | IN_ESCAPE);
+        ESH_INSTANCE->flags
+            &= ~(IN_BRACKET_ESCAPE | IN_NUMERIC_ESCAPE | IN_ESCAPE);
     }
 
     switch (esc) {
     case ESCCHAR_UP:
     case ESCCHAR_DOWN:
         if (esc == ESCCHAR_UP) {
-            ++esh->hist.idx;
-        } else if (esh->hist.idx) {
-            --esh->hist.idx;
+            ++ESH_INSTANCE->hist.idx;
+        } else if (ESH_INSTANCE->hist.idx) {
+            --ESH_INSTANCE->hist.idx;
         }
-        if (esh->hist.idx) {
-            int offset = esh_hist_nth(esh, esh->hist.idx - 1);
+        if (ESH_INSTANCE->hist.idx) {
+            int offset = esh_hist_nth(ESH_INSTANCE,
+                    ESH_INSTANCE->hist.idx - 1);
             if (offset >= 0 || esc == ESCCHAR_DOWN) {
-                esh_hist_print(esh, offset);
+                esh_hist_print(ESH_INSTANCE, offset);
             } else if (esc == ESCCHAR_UP) {
                 // Don't overscroll the top
-                --esh->hist.idx;
+                --ESH_INSTANCE->hist.idx;
             }
         } else {
-            esh_restore(esh);
+            esh_restore(ESH_INSTANCE);
         }
         break;
 
@@ -329,10 +337,10 @@ static void handle_esc(esh_t * esh, char esc)
         cdelta = 1;
         goto cmove;
     case ESCCHAR_HOME:
-        cdelta = -esh->ins;
+        cdelta = -ESH_INSTANCE->ins;
         goto cmove;
     case ESCCHAR_END:
-        cdelta = esh->cnt - esh->ins;
+        cdelta = ESH_INSTANCE->cnt - ESH_INSTANCE->ins;
         goto cmove;
     case ESCCHAR_CTRLLEFT:
         cdelta = -1;
@@ -344,10 +352,10 @@ static void handle_esc(esh_t * esh, char esc)
 
     return;
 cmove: // micro-optimization, yo!
-    cursor_move(esh, cdelta);
+    cursor_move(ESH_INSTANCE, cdelta);
     return;
 wmove:
-    word_move(esh, cdelta);
+    word_move(ESH_INSTANCE, cdelta);
 }
 
 
@@ -357,8 +365,9 @@ wmove:
  */
 static bool command_is_nop(esh_t * esh)
 {
-    for (size_t i = 0; esh->buffer[i]; ++i) {
-        if (esh->buffer[i] != ' ') {
+    (void) esh;
+    for (size_t i = 0; ESH_INSTANCE->buffer[i]; ++i) {
+        if (ESH_INSTANCE->buffer[i] != ' ') {
             return false;
         }
     }
@@ -372,40 +381,43 @@ static bool command_is_nop(esh_t * esh)
  */
 static void execute_command(esh_t * esh)
 {
-    // If a command from the history is selected, put it in the edit buffer.
-    esh_hist_substitute(esh);
+    (void) esh;
 
-    if (esh->cnt >= ESH_BUFFER_LEN) {
-        do_overflow_callback(esh, esh->buffer);
-        esh->cnt = esh->ins = 0;
-        esh_print_prompt(esh);
+    // If a command from the history is selected, put it in the edit buffer.
+    esh_hist_substitute(ESH_INSTANCE);
+
+    if (ESH_INSTANCE->cnt >= ESH_BUFFER_LEN) {
+        do_overflow_callback(ESH_INSTANCE, ESH_INSTANCE->buffer);
+        ESH_INSTANCE->cnt = ESH_INSTANCE->ins = 0;
+        esh_print_prompt(ESH_INSTANCE);
         return;
     } else {
-        esh->buffer[esh->cnt] = 0;
+        ESH_INSTANCE->buffer[ESH_INSTANCE->cnt] = 0;
     }
 
-    esh_putc(esh, '\n');
+    esh_putc(ESH_INSTANCE, '\n');
 
-    if (!command_is_nop(esh)) {
-        esh_hist_add(esh, esh->buffer);
+    if (!command_is_nop(ESH_INSTANCE)) {
+        esh_hist_add(ESH_INSTANCE, ESH_INSTANCE->buffer);
 
-        int argc = esh_parse_args(esh);
+        int argc = esh_parse_args(ESH_INSTANCE);
 
         if (argc > ESH_ARGC_MAX) {
-            do_overflow_callback(esh, esh->buffer);
+            do_overflow_callback(ESH_INSTANCE, ESH_INSTANCE->buffer);
         } else if (argc > 0) {
-            do_command(esh, argc, esh->argv);
+            do_command(ESH_INSTANCE, argc, ESH_INSTANCE->argv);
         }
     }
 
-    esh->cnt = esh->ins = 0;
-    esh_print_prompt(esh);
+    ESH_INSTANCE->cnt = ESH_INSTANCE->ins = 0;
+    esh_print_prompt(ESH_INSTANCE);
 }
 
 
 void esh_print_prompt(esh_t * esh)
 {
-    esh_puts_flash(esh, FSTR(ESH_PROMPT));
+    (void) esh;
+    esh_puts_flash(ESH_INSTANCE, FSTR(ESH_PROMPT));
 }
 
 
@@ -415,25 +427,29 @@ void esh_print_prompt(esh_t * esh)
 // API WARNING: This function is separately declared in lib.rs
 void esh_default_overflow(esh_t * esh, char const * buffer, void * arg)
 {
+    (void) esh;
     (void) buffer;
     (void) arg;
-    esh_puts_flash(esh, FSTR("\nesh: command buffer overflow\n"));
+    esh_puts_flash(ESH_INSTANCE, FSTR("\nesh: command buffer overflow\n"));
 }
 
 
 bool esh_putc(esh_t * esh, char c)
 {
-    do_print_callback(esh, c);
+    (void) esh;
+
+    do_print_callback(ESH_INSTANCE, c);
     return false;
 }
 
 
 bool esh_puts(esh_t * esh, char const * s)
 {
+    (void) esh;
     char c;
 
     while ((c = *s++)) {
-        esh_putc(esh, c);
+        esh_putc(ESH_INSTANCE, c);
     }
     return false;
 }
@@ -442,10 +458,11 @@ bool esh_puts(esh_t * esh, char const * s)
 #ifdef __AVR_ARCH__
 bool esh_puts_flash(esh_t * esh, char const __flash * s)
 {
+    (void) esh;
     char c;
 
     while ((c = *s++)) {
-        esh_putc(esh, c);
+        esh_putc(ESH_INSTANCE, c);
     }
     return false;
 }
@@ -454,11 +471,14 @@ bool esh_puts_flash(esh_t * esh, char const __flash * s)
 
 void esh_restore(esh_t * esh)
 {
-    esh_puts_flash(esh, FSTR(ESC_ERASE_LINE "\r")); // Clear line
-    esh_print_prompt(esh);
-    esh->buffer[esh->cnt] = 0;
-    esh_puts(esh, esh->buffer);
-    term_cursor_move(esh, -(int)(esh->cnt - esh->ins));
+    (void) esh;
+
+    esh_puts_flash(ESH_INSTANCE, FSTR(ESC_ERASE_LINE "\r")); // Clear line
+    esh_print_prompt(ESH_INSTANCE);
+    ESH_INSTANCE->buffer[ESH_INSTANCE->cnt] = 0;
+    esh_puts(ESH_INSTANCE, ESH_INSTANCE->buffer);
+    term_cursor_move(ESH_INSTANCE,
+            -(int)(ESH_INSTANCE->cnt - ESH_INSTANCE->ins));
 }
 
 
@@ -476,12 +496,14 @@ size_t esh_get_slice_size(void)
  */
 static void term_cursor_move(esh_t * esh, int n)
 {
+    (void) esh;
+
     for ( ; n > 0; --n) {
-        esh_puts_flash(esh, FSTR(ESC_CURSOR_RIGHT));
+        esh_puts_flash(ESH_INSTANCE, FSTR(ESC_CURSOR_RIGHT));
     }
 
     for ( ; n < 0; ++n) {
-        esh_puts_flash(esh, FSTR(ESC_CURSOR_LEFT));
+        esh_puts_flash(ESH_INSTANCE, FSTR(ESC_CURSOR_LEFT));
     }
 }
 
@@ -492,15 +514,17 @@ static void term_cursor_move(esh_t * esh, int n)
  */
 static void cursor_move(esh_t * esh, int n)
 {
-    esh_hist_substitute(esh);
-    if ((int) esh->ins + n < 0) {
-        n = -esh->ins;
-    } else if ((int) esh->ins + n > (int) esh->cnt) {
-        n = esh->cnt - esh->ins;
+    (void) esh;
+
+    esh_hist_substitute(ESH_INSTANCE);
+    if ((int) ESH_INSTANCE->ins + n < 0) {
+        n = -ESH_INSTANCE->ins;
+    } else if ((int) ESH_INSTANCE->ins + n > (int) ESH_INSTANCE->cnt) {
+        n = ESH_INSTANCE->cnt - ESH_INSTANCE->ins;
     }
 
-    term_cursor_move(esh, n);
-    esh->ins += n;
+    term_cursor_move(ESH_INSTANCE, n);
+    ESH_INSTANCE->ins += n;
 }
 
 
@@ -513,22 +537,24 @@ static void cursor_move(esh_t * esh, int n)
  */
 static void word_move(esh_t * esh, int dir)
 {
-    size_t ins = esh->ins;
-    esh_hist_substitute(esh);
+    (void) esh;
+
+    size_t ins = ESH_INSTANCE->ins;
+    esh_hist_substitute(ESH_INSTANCE);
 
     if (dir == 0) {
         return;
     } else if (dir < 0) {
-        for (; ins > 0 && esh->buffer[ins - 1] == ' '; --ins);
-        for (; ins > 0 && esh->buffer[ins - 1] != ' '; --ins);
+        for (; ins > 0 && ESH_INSTANCE->buffer[ins - 1] == ' '; --ins);
+        for (; ins > 0 && ESH_INSTANCE->buffer[ins - 1] != ' '; --ins);
     } else {
-        const size_t cnt = esh->cnt;
-        for (; ins < cnt && esh->buffer[ins] != ' '; ++ins);
-        for (; ins < cnt && esh->buffer[ins] == ' '; ++ins);
+        const size_t cnt = ESH_INSTANCE->cnt;
+        for (; ins < cnt && ESH_INSTANCE->buffer[ins] != ' '; ++ins);
+        for (; ins < cnt && ESH_INSTANCE->buffer[ins] == ' '; ++ins);
     }
 
-    term_cursor_move(esh, ins - esh->ins);
-    esh->ins = ins;
+    term_cursor_move(ESH_INSTANCE, ins - ESH_INSTANCE->ins);
+    ESH_INSTANCE->ins = ins;
 }
 
 
@@ -539,24 +565,27 @@ static void word_move(esh_t * esh, int dir)
  */
 static void ins_del(esh_t * esh, char c)
 {
-    int sgn = c ? 1 : -1;
-    bool move = (esh->ins != esh->cnt);
+    (void) esh;
 
-    memmove(&esh->buffer[esh->ins + sgn], &esh->buffer[esh->ins],
-            esh->cnt - esh->ins);
+    int sgn = c ? 1 : -1;
+    bool move = (ESH_INSTANCE->ins != ESH_INSTANCE->cnt);
+
+    memmove(&ESH_INSTANCE->buffer[ESH_INSTANCE->ins + sgn],
+            &ESH_INSTANCE->buffer[ESH_INSTANCE->ins],
+            ESH_INSTANCE->cnt - ESH_INSTANCE->ins);
 
     if (c) {
-        esh->buffer[esh->ins] = c;
+        ESH_INSTANCE->buffer[ESH_INSTANCE->ins] = c;
     }
 
-    esh->cnt += sgn;
-    esh->ins += sgn;
+    ESH_INSTANCE->cnt += sgn;
+    ESH_INSTANCE->ins += sgn;
 
     if (move) {
-        esh_restore(esh);
+        esh_restore(ESH_INSTANCE);
     } else if (!c) {
-        esh_puts_flash(esh, FSTR("\b \b"));
+        esh_puts_flash(ESH_INSTANCE, FSTR("\b \b"));
     } else {
-        esh_putc(esh, c);
+        esh_putc(ESH_INSTANCE, c);
     }
 }
