@@ -214,7 +214,7 @@ void esh_rx(esh_t * esh, char c)
         // Verify the c is valid non-extended ASCII (and thus also valid
         // UTF-8, for Rust), regardless of whether this platform's isprint()
         // accepts things above 0x7f.
-        if (c >= 0x20 && (unsigned char) c <= 0x7f) {
+        if (c >= 0x20 && (unsigned char) c < 0x7f) {
             handle_char(esh, c);
         } else {
             handle_ctrl(esh, c);
