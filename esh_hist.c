@@ -119,6 +119,38 @@ static void clobber_buffer(esh_t * esh, int offset)
 }
 
 
+/**
+ * Compare the string at buffer offset with the supplied string.
+ * @param esh - esh instance
+ * @param offset - offset into the ring buffer
+ * @param s - the string to compare with
+ * @return true - if strings do match
+ * @return false - if strings do NOT match
+ */
+static bool compare_buffer_with_string(esh_t * esh, int offset, char const * s)
+{
+    (void) esh;
+    const char * string_ptr = s;
+    for (int i = offset; ; i = (i + 1) % ESH_HIST_LEN) {
+        if (i == modulo(offset - 1, ESH_HIST_LEN)) {
+            // Wrapped around and didn't encounter NUL. Stop here to prevent
+            // an infinite loop.
+            return false;
+        }
+
+        if (!ESH_INSTANCE->hist.hist[i] && !*string_ptr) // Are the strings the same length?
+            return true;
+
+        if (ESH_INSTANCE->hist.hist[i] != *string_ptr) // Does a character not match?
+            return false;
+
+        string_ptr++;
+    }
+
+    return false;
+}
+
+
 bool esh_hist_init(esh_t * esh)
 {
     (void) esh;
@@ -163,6 +195,16 @@ int esh_hist_nth(esh_t * esh, int n)
 bool esh_hist_add(esh_t * esh, char const * s)
 {
     (void) esh;
+
+    // Compare the string with the last string
+    int offset = esh_hist_nth(ESH_INSTANCE, 0);
+
+    if (offset >= 0) {
+        if (compare_buffer_with_string(ESH_INSTANCE, offset, s)) {
+            return false; // If they match then do not add it to the buffer
+        }
+    }
+
     const int start = (ESH_INSTANCE->hist.tail + 1) % ESH_HIST_LEN;
 
     for (int i = start; ; i = (i + 1) % ESH_HIST_LEN)

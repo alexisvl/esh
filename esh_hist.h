@@ -69,7 +69,7 @@ int esh_hist_nth(esh_t * esh, int n);
  * intentionally reset to avoid restoring a corrupted string later.
  * @param esh - esh instance
  * @param s - string to add
- * @return true iff the string didn't fit (this is destructive!)
+ * @return true if the string didn't fit (this is destructive!)
  */
 bool esh_hist_add(esh_t * esh, char const * s);
 
@@ -84,7 +84,7 @@ void esh_hist_print(esh_t * esh, int offset);
  * If history is currently being browsed, substitute the selected history item
  * for the buffer and redraw the buffer for editing.
  * @param esh - esh instance
- * @return true iff the substitution was made (i.e. history was being browsed)
+ * @return true if the substitution was made (i.e. history was being browsed)
  */
 bool esh_hist_substitute(esh_t * esh);
 
